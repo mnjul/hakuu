@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "devDependencies": {
+    "clean-css-cli": "^4.1.11",
+    "csslint": "^1.0.5",
+    "eslint": "^4.19.1",
+    "stylelint": "^9.2.0",
+    "stylelint-config-standard": "^18.2.0",
+    "uglify-es": "^3.3.9"
+  }
+}

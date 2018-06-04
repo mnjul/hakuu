@@ -1,0 +1,57 @@
+<!--
+ This is part of Hakuu, a web site, and is licensed under AGPLv3.
+ Copyright (C) 2018 Min-Zhong Lu
+ -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="description" content="Demo website">
+  <meta lang="robots" content="noindex, nofollow, noarchive, nosnippet" />
+  <title>Hakuu Demo</title>
+  <link rel="apple-touch-icon" sizes="152x152" href="favicon_152.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon_32.png" />
+  <meta name="application-name" content="Hakuu"/>
+  <meta name="msapplication-TileColor" content="#f8f8f8" />
+  <meta name="msapplication-TileImage" content="favicon_152.png" />  
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="dep/normalize.css/normalize.css" rel="stylesheet" type="text/css" />
+  <link href="assets/styles/index.css" rel="stylesheet" type="text/css" />
+  <script defer src="assets/scripts/common.js"></script>
+  <script defer src="assets/scripts/page.js"></script>
+  <script defer src="assets/scripts/content-manager.js"></script>
+  <script defer src="assets/scripts/rain-engine.js"></script>
+  <script defer src="assets/scripts/canvas-controller.js"></script>
+  <script defer src="assets/scripts/site-controller.js"></script>
+  <script defer src="assets/scripts/index.js"></script>
+</head>
+<body>
+  <aside id="sidebar">
+    <nav id="main-menu" class="sidebar-actionable">
+      <section class="main-menu-section">
+        <span data-page="home">前言</span>
+      </section>
+      <section class="main-menu-section">
+        <span data-page="finale">結語</span>
+      </section>
+    </nav>
+    <section id="sidebar-controls" class="sidebar-actionable">
+      <div id="rain-control">
+        <span id="rain-control-stop">雨停</span><span id="rain-control-start">下雨</span>
+      </div>
+      <!--<div id="volume-control">
+        <span>靜</span><span>微</span><span>中</span><span>吵</span>
+      </div>-->
+    </section>
+    <div id="loading-indicator">
+      <span>.</span><span>.</span><span>.</span>
+    </div>
+  </aside>
+  <section id="main">
+    <canvas id="viewport"></canvas>
+  </section>
+  <div id="tech-blocker-msg" class="tech-blocker">This website requires latest versions of Mozilla Firefox, Google Chrome, Microsoft Edge, Safari, or latest mobile operating systems.<br /><br />Technical quesitons? Discuss at <a href="https://github.com/mnjul/hakuu/issues" target="_blank">GitHub repo's Issues</a></div>
+  <script src="assets/scripts/tech-blocker-1.js" class="tech-blocker"></script>
+  <script src="assets/scripts/tech-blocker-2.js" class="tech-blocker"></script>
+</body>
+</html>

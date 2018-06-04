@@ -1,0 +1,77 @@
+/*
+ * This is part of Hakuu, a web site, and is licensed under AGPLv3.
+ * Copyright (C) 2018 Min-Zhong Lu
+ */
+
+:root {
+  --dppx: /*!%DPPX%*/0;
+  --width: /*!%WIDTHDOTS%*/0px;
+  --padding-top: /*!%PADDINGTOP%*/0rem;
+  --p-margin-bottom: /*!%PMARGINBOTTOM%*/0rem;
+  --font-size: /*!%FONTSIZE%*/0rem;
+  --line-height: /*!%LINEHEIGHT%*/0;
+}
+
+*,
+*::after,
+*::before {
+  box-sizing: border-box;
+}
+
+svg, html {
+  font-size: calc(var(--dppx) * 100px); /* multiply by 100 to work around user-agent's minimum font sizes */
+}
+
+@font-face {
+  font-family: 'MIH Latin';
+  font-weight: 200;
+  src: url('/*!%LATINFONT%*/0') format('truetype');
+}
+
+@font-face {
+  font-family: 'MIH CJK';
+  font-weight: 200;
+  src: url('/*!%CJKFONT%*/0') format('opentype');
+}
+
+#svg-computer-body, #svg-computer-body * {
+   box-sizing: border-box;
+}
+
+#svg-computer-body {
+   margin: 0;
+   padding: 0;
+   background-color: #fafafa;
+   width: var(--width);
+   color: hsl(0, 0%, 40%);
+}
+
+#svg-main-container {
+   width: var(--width);
+   font-family: 'MIH Latin', 'Cormorant Infant', 'MIH CJK', 'Source Han Serif', serif;
+   font-weight: 200;
+   font-size: var(--font-size);
+   line-height: var(--line-height);
+   text-rendering: optimizeLegibility;
+   letter-spacing: 0.01rem;
+   padding: var(--padding-top) 0.12rem 0.22rem;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: var(--p-margin-bottom);
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+a {
+  -webkit-text-decoration: dashed underline hsl(0, 0%, 50%);
+  text-decoration: dashed underline hsl(0, 0%, 50%);
+  color: hsl(0, 0%, 40%); /* normalize.css not doing this for edge */
+}
+
+#finale-declaration p {
+  line-height: 1.2;
+}
