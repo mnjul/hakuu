@@ -29,7 +29,7 @@ users excuses to stick with older software. Mark my words: I hate supporting
 older software and having another layer of abstraction to debug.
 Additionally, transpilers are best at dealing with syntactic sugars. They can't
 100% replicate the functionality of proxies, promises (and by extension async
-constructs), forak reference-enabled containers, among others.
+constructs), week reference-enabled containers, among others.
 
 Please note I'm saying this in mid-2018. Latest Chrome (on any planform
 including latest Android), Firefox, Safari (on any platform including latest
