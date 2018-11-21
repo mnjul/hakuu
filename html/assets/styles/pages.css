@@ -6,7 +6,9 @@
 :root {
   --dppx: /*!%DPPX%*/0;
   --width: /*!%WIDTHDOTS%*/0px;
+  --padding-horizontal: /*!%PADDINGHORIZONTAL%*/0rem;
   --padding-top: /*!%PADDINGTOP%*/0rem;
+  --padding-bottom: /*!%PADDINGBOTTOM%*/0rem;
   --p-margin-bottom: /*!%PMARGINBOTTOM%*/0rem;
   --font-size: /*!%FONTSIZE%*/0rem;
   --line-height: /*!%LINEHEIGHT%*/0;
@@ -43,7 +45,7 @@ svg, html {
    padding: 0;
    background-color: #fafafa;
    width: var(--width);
-   color: hsl(0, 0%, 40%);
+   color: hsl(0, 0%, 30%);
 }
 
 #svg-main-container {
@@ -54,7 +56,7 @@ svg, html {
    line-height: var(--line-height);
    text-rendering: optimizeLegibility;
    letter-spacing: 0.01rem;
-   padding: var(--padding-top) 0.12rem 0.22rem;
+   padding: var(--padding-top) var(--padding-horizontal) var(--padding-bottom);
 }
 
 p {
@@ -69,7 +71,7 @@ p:last-child {
 a {
   -webkit-text-decoration: dashed underline hsl(0, 0%, 50%);
   text-decoration: dashed underline hsl(0, 0%, 50%);
-  color: hsl(0, 0%, 40%); /* normalize.css not doing this for edge */
+  color: hsl(0, 0%, 30%); /* normalize.css not doing this for edge */
 }
 
 #finale-declaration p {

@@ -29,7 +29,7 @@ users excuses to stick with older software. Mark my words: I hate supporting
 older software and having another layer of abstraction to debug.
 Additionally, transpilers are best at dealing with syntactic sugars. They can't
 100% replicate the functionality of proxies, promises (and by extension async
-constructs), week reference-enabled containers, among others.
+constructs), weak reference-enabled containers, among others.
 
 Please note I'm saying this in mid-2018. Latest Chrome (on any planform
 including latest Android), Firefox, Safari (on any platform including latest
@@ -87,8 +87,7 @@ serving as Lorem Ipsem. Actual Lorem Ipsem text is used where I have English
 text in Hakuu. 
 
 Images are just random solid colors. Background music is white noise from Adobe
-Audition. (Hakuu currently does not have images or background music so this
-paragraph is irrelevant.)
+Audition.
 
 # License
 rain-engine.js, where code was derived from Codrop's [RainEffect](https://github.com/codrops/RainEffect/commits/master) repo,

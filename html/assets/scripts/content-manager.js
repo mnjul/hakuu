@@ -5,17 +5,38 @@
 
 ;(function(exports){
 
-const FONTS = {
+const FONTS = Object.seal({
   Latin: 'latin.ttf',
   CJK: 'cjk.otf',
-};
+});
+
+const PAGES = ['home', 'finale'];
 
 let _;
 
 class ContentManager {
   constructor() {
+    this.fonts = FONTS;
+
     _(this)._pageSources = {}; // pagename => PageSource
-    this.fonts = Object.seal(FONTS);
+
+    _(this)._pageFetchPromises = {}; // pagename => Promise
+    _(this)._styleSheetFetchPromise = undefined;
+    _(this)._fontFetchPromises = {}; // fontname => Promise
+
+   _(this)._load();
+  }
+
+  _load() {
+    PAGES.forEach(name => {
+      _(this)._pageFetchPromises[name] = fetch(`pages/${name}.xhtml`);
+    });
+
+    _(this)._styleSheetFetchPromise = fetch('assets/styles/pages.css');
+
+    _(this)._fontFetchPromises = FONTS.mapValues(
+      filename => fetch(`assets/fonts/${filename}`)
+    );
   }
 
   async getPageSourcePromise(name) {
@@ -27,20 +48,20 @@ class ContentManager {
   }
 
   async _loadPage(name) {
-    return new window.PageSource(await (await fetch(`pages/${name}.xhtml`)).text());
+    return new window.PageSource(await (await _(this)._pageFetchPromises[name]).text());
   }
 
   // Resolution of these fetch promises should be handled separately (as long
   // as one font is ready, we attach it to index css), so no wrapping with
   // Promise.all or async.
   getFontBlobPromises() {
-    return FONTS.mapValues(
-      filename => fetch(`assets/fonts/${filename}`).then(resp => resp.blob())
+    return _(this)._fontFetchPromises.mapValues(
+      promise => promise.then(resp => resp.blob())
     );
   }
 
   async getPageStyleSheetPromise() {
-    return await(await fetch('assets/styles/pages.css')).text();
+    return await(await _(this)._styleSheetFetchPromise).text();
   }
 }
 

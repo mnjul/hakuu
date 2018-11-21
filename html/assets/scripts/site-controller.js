@@ -5,18 +5,18 @@
 
 ;(function(exports){
 
-const FONT_WEIGHT = 200;
 const INIT_RAINING = true;
 
 let _;
 
 // TODO: Streamline state transitions
 class SiteController {
-  constructor(initPageName, contentManager, canvasController) {
+  constructor(initPageName, contentManager, canvasController, audioManager) {
     _(this)._initPageName = initPageName;
 
     _(this)._canvasController = canvasController;
     _(this)._contentManager = contentManager;
+    _(this)._audioManager = audioManager;
 
     Object.defineProperty(_(this), '_raining', {
       get() {
@@ -24,6 +24,15 @@ class SiteController {
       },
       set(__raining) {
         $('#rain-control').dataset.raining = __raining;
+      }
+    });
+
+    Object.defineProperty(_(this), '_volumeLevel', {
+      get() {
+        return $('#volume-control').dataset.level;
+      },
+      set(__volumeLevel) {
+        $('#volume-control').dataset.level = __volumeLevel;
       }
     });
 
@@ -36,10 +45,29 @@ class SiteController {
         }
       }
     });
+
+    Object.defineProperty(_(this), '_audioAvailable', {
+      set(__audioAvailable) {
+        if (__audioAvailable) {
+          $('body').classList.add('audio-available');
+        } else {
+          $('body').classList.remove('audio-available');
+        }
+      }
+    });
+
+    Object.defineProperty(_(this), '_currentPage', {
+      set(__currentPage) {
+        $('#main-menu').dataset.currentPage = __currentPage;
+        $('#small-view-header-page-title').textContent =
+          $(`#main-menu span[data-page="${__currentPage}"]`).textContent;
+      }
+    });
   }
 
   _initEventListeners() {
-    // requestAnimationFrame: sometimes Chrome doesn't have proper getBoundingRect just at DOMContentLoaded
+    // requestAnimationFrame: sometimes Chrome doesn't have proper
+    // getBoundingRect just at DOMContentLoaded
     document.addEventListener(
       'DOMContentLoaded',
       () => requestAnimationFrame(_(this)._onReady.bind(this))
@@ -47,19 +75,38 @@ class SiteController {
 
     window.addEventListener('resize', _(this)._onResize.bind(this));
 
-    $('#rain-control').addEventListener('click', _(this)._onRainContainerClick.bind(this));
+    $('#main-menu').addEventListener('click',
+      _(this)._onMainMenuClick.bind(this));
 
-    $('#main-menu').addEventListener('click', _(this)._onMenuContainerClick.bind(this));
+    $('#rain-control').addEventListener('click',
+      _(this)._onRainMenuClick.bind(this));
+
+    $('#volume-control').addEventListener('click',
+      _(this)._onVolumeMenuClick.bind(this));
+
+    $('#small-view-sidebar-toggle').addEventListener('click',
+      _(this)._onSmallViewSidebarToggleClick.bind(this));
 
     // hack to trigger mobile safari's :active status
     $('#sidebar').addEventListener('touchstart', () => undefined);
+
+    // disallow scrolling on sidebar and small header
+    Array.from($$('#sidebar, #small-view-header')).forEach(elem => {
+      elem.addEventListener('touchmove', evt => {
+        evt.preventDefault();
+      });
+    });
   }
 
-  async _restart() {
+  async _restart(initial) {
     _(this)._loading = true;
     _(this)._canvasController.destroy();
     await _(this)._canvasController.start(_(this)._raining);
     _(this)._loading = false;
+
+    if (initial && isIOSOrSafari) {
+      setTimeout(_(this)._restart.bind(this));
+    }
   }
 
   _onReady() {
@@ -67,14 +114,23 @@ class SiteController {
 
     _(this)._canvasController.ready();
 
-    _(this)._switchPage(_(this)._initPageName);
+    _(this)._switchPage(_(this)._initPageName, true);
   }
 
   _onResize() {
     _(this)._restart();
   }
 
-  _onRainContainerClick(evt) {
+  _onMainMenuClick(evt) {
+    if (!(evt.target instanceof HTMLSpanElement)){
+      return;
+    }
+
+    _(this)._switchPage(evt.target.dataset.page);
+    $('body').classList.remove('small-view-sidebar-visible');
+  }
+
+  _onRainMenuClick(evt) {
     if (!(evt.target instanceof HTMLSpanElement)){
       return;
     }
@@ -88,12 +144,24 @@ class SiteController {
     }
   }
 
-  _onMenuContainerClick(evt) {
+  _onVolumeMenuClick(evt) {
     if (!(evt.target instanceof HTMLSpanElement)){
       return;
     }
 
-    _(this)._switchPage(evt.target.dataset.page);
+    let level = evt.target.dataset.level;
+
+    _(this)._volumeLevel = level;
+
+    if (level === 'silent') {
+      _(this)._audioManager.stop();
+    } else {
+      _(this)._audioManager.playAndSetVolume(level);
+    }
+  }
+
+  _onSmallViewSidebarToggleClick() {
+    $('body').classList.toggle('small-view-sidebar-visible');
   }
 
   _handleFontBlobPromises(fontBlobPromises) {
@@ -109,7 +177,7 @@ class SiteController {
         styleElem.textContent = `
           @font-face {
             font-family: 'MIH ${fontName.toUpperCase()}';
-            font-weight: ${FONT_WEIGHT};
+            font-weight: ${getComputedStyle($('body')).getPropertyValue('font-weight')};
             src: url('${url}') format('${format}');
           }
         `;
@@ -119,15 +187,23 @@ class SiteController {
     });
   }
 
-  async _switchPage(pageName) {
+  async _handleAudioAvailablePromise(audioAvailablePromise) {
+    await audioAvailablePromise;
+
+    _(this)._audioAvailable = true;
+
+    $('#volume-control > span[data-level="silent"]').click();
+  }
+
+  async _switchPage(pageName, initial) {
     _(this)._loading = true;
     let pageSourcePromise = _(this)._contentManager.getPageSourcePromise(pageName);
 
     _(this)._canvasController.pageSourcePromise = pageSourcePromise;
-    _(this)._restart();
+    _(this)._restart(initial);
 
     await pageSourcePromise;
-    $('#main-menu').dataset.currentPage = pageName;
+    _(this)._currentPage = pageName;
   }
 
   init() {
@@ -140,7 +216,11 @@ class SiteController {
       _(this)._contentManager.getPageStyleSheetPromise();
 
     _(this)._initEventListeners();
+
     _(this)._handleFontBlobPromises(fontBlobPromises);
+
+    _(this)._handleAudioAvailablePromise(
+      _(this)._audioManager.getAudioAvailablePromise());
   }
 }
 

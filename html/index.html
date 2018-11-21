@@ -9,16 +9,13 @@
   <meta name="description" content="Demo website">
   <meta lang="robots" content="noindex, nofollow, noarchive, nosnippet" />
   <title>Hakuu Demo</title>
-  <link rel="apple-touch-icon" sizes="152x152" href="favicon_152.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon_32.png" />
-  <meta name="application-name" content="Hakuu"/>
-  <meta name="msapplication-TileColor" content="#f8f8f8" />
-  <meta name="msapplication-TileImage" content="favicon_152.png" />  
+  <link rel="icon" sizes="192x192" href="favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="dep/normalize.css/normalize.css" rel="stylesheet" type="text/css" />
   <link href="assets/styles/index.css" rel="stylesheet" type="text/css" />
   <script defer src="assets/scripts/common.js"></script>
   <script defer src="assets/scripts/page.js"></script>
+  <script defer src="assets/scripts/audio-manager.js"></script>
   <script defer src="assets/scripts/content-manager.js"></script>
   <script defer src="assets/scripts/rain-engine.js"></script>
   <script defer src="assets/scripts/canvas-controller.js"></script>
@@ -26,6 +23,12 @@
   <script defer src="assets/scripts/index.js"></script>
 </head>
 <body>
+  <aside id="small-view-header">
+    <span id="small-view-header-page-title"></span>
+    <div class="loading-indicator">
+      <span></span><span></span><span></span>
+    </div>
+  </aside>
   <aside id="sidebar">
     <nav id="main-menu" class="sidebar-actionable">
       <section class="main-menu-section">
@@ -39,17 +42,18 @@
       <div id="rain-control">
         <span id="rain-control-stop">雨停</span><span id="rain-control-start">下雨</span>
       </div>
-      <!--<div id="volume-control">
-        <span>靜</span><span>微</span><span>中</span><span>吵</span>
-      </div>-->
+      <div id="volume-control">
+        <span data-level="silent">靜</span><span data-level="low">微</span><span data-level="medium">中</span><span data-level="loud">吵</span>
+      </div>
     </section>
-    <div id="loading-indicator">
-      <span>.</span><span>.</span><span>.</span>
+    <div class="loading-indicator">
+      <span></span><span></span><span></span>
     </div>
   </aside>
   <section id="main">
     <canvas id="viewport"></canvas>
   </section>
+  <div id="small-view-sidebar-toggle"></div>
   <div id="tech-blocker-msg" class="tech-blocker">This website requires latest versions of Mozilla Firefox, Google Chrome, Microsoft Edge, Safari, or latest mobile operating systems.<br /><br />Technical quesitons? Discuss at <a href="https://github.com/mnjul/hakuu/issues" target="_blank">GitHub repo's Issues</a></div>
   <script src="assets/scripts/tech-blocker-1.js" class="tech-blocker"></script>
   <script src="assets/scripts/tech-blocker-2.js" class="tech-blocker"></script>

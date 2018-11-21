@@ -31,6 +31,7 @@ const SrcDirName = "./html/"
 const DstDirName = "./output/"
 const PagesDirName = "pages/"
 const FontsDirName = "assets/fonts/"
+const BgmDirName = "assets/bgm/"
 const StylesDirName = "assets/styles/"
 const ScriptsDirName = "assets/scripts/"
 
@@ -52,6 +53,7 @@ func main() {
 	os.MkdirAll(DstDirName, 0755)
 	os.MkdirAll(DstDirName+PagesDirName, 0755)
 	os.MkdirAll(DstDirName+FontsDirName, 0755)
+	os.MkdirAll(DstDirName+BgmDirName, 0755)
 	os.MkdirAll(DstDirName+StylesDirName, 0755)
 	os.MkdirAll(DstDirName+ScriptsDirName, 0755)
 
@@ -88,11 +90,11 @@ func main() {
 	fmt.Println("> Copying robots.txt...")
 	copyFile("robots.txt")
 
-	fmt.Println("> Copying favicon_32.png...")
-	copyFile("favicon_32.png")
+	fmt.Println("> Copying favicon.png...")
+	copyFile("favicon.png")
 
-	fmt.Println("> Copying favicon_152.png...")
-	copyFile("favicon_152.png")
+	fmt.Println("> Copying bgm...")
+	copyDir("assets/bgm/")
 }
 
 func buildIndexJsAndHtml() {
@@ -163,6 +165,7 @@ func buildIndexJsAndHtml() {
 	fmt.Println("> Writing index.html...")
 	writeFile("index.html", dstIndexHtml)
 
+	dstIndexJs = ensureDebugFalse(dstIndexJs)
 	dstIndexJs = removeMarkedJs(dstIndexJs)
 
 	fmt.Println("> Writing concatenated index.js...")
@@ -299,7 +302,7 @@ func minifyIndexJs(dstPath string) {
 		"./node_modules/uglify-es/bin/uglifyjs",
 		"-c",
 		"-m",
-		"--mangle-props", `regex=/^(?!\$.*$).*/,reserved=['aborted', 'signal', 'Latin', 'CJK', 'dppx', 'widthDots', 'paddingTop', 'pMarginBottom', 'fontSize', 'lineHeight', 'raining', '_raining', '_loading']`,
+		"--mangle-props", `regex=/^(?!\$.*$).*/,reserved=['aborted', 'signal', 'Latin', 'CJK', 'medium', 'low', 'loud', 'silent', 'dppx', 'widthDots', 'paddingTop', 'paddingHorizontal', 'paddingBottom', 'pMarginBottom', 'fontSize', 'lineHeight', 'raining', '_raining', '_loading', '_audioAvailable', '_volumeLevel', '_currentPage']`,
 		"-o", fileName,
 		fileName)
 	runAndCheckCmd(cmd)
@@ -309,4 +312,10 @@ func removeMarkedJs(content string) string {
 	markRegex := regexp.MustCompile(`(?s)/\*<BUILD_REMOVAL>\*/.*?/\*</BUILD_REMOVAL>\*/`)
 
 	return markRegex.ReplaceAllString(content, "")
+}
+
+func ensureDebugFalse(content string) string {
+	markRegex := regexp.MustCompile(`(?m)^Object\.defineProperty\(exports,\s*'DEBUG',\s*{\s*value:\s*true\s*}\s*\);?$`)
+
+	return markRegex.ReplaceAllString(content, "Object.defineProperty(exports, 'DEBUG', {value: false});")
 }

@@ -71,7 +71,7 @@ Page = class {
   }
 
   async _computeSVGRendering() {
-    let dppx = window.devicePixelRatio;
+    let dppx = _(this)._dppx;
     $('html').style.fontSize = `${dppx * 100}px`;
 
     let doc = document.importNode(_(this)._doc.documentElement, true);
@@ -87,36 +87,37 @@ Page = class {
       })
     ));
 
-    [_(this)._contentHeightDots, _(this)._actionables] = await new Promise(resolve => {
-      // It appears that for android, requestAnimationFrame is not enough, and we
-      // need two separate return-to-event-queue constructs.
-      setTimeout(() => {
-        requestAnimationFrame(() => {
-          let contentHeightDots = Math.ceil(
-            doc.$('#svg-main-container').getBoundingClientRect().height
-          );
+    [_(this)._contentHeightDots, _(this)._actionables] = await new Promise(
+      resolve => {
+        // It appears that for android, one requestAnimationFrame call is not
+        // enough, and we need two separate return-to-event-queue constructs.
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            let contentHeightDots = Math.ceil(
+              doc.$('#svg-main-container').getBoundingClientRect().height
+            );
 
-          let actionables = [
-            ...Array.from(doc.$$('[data-action]'))
-              .map(elem => ({
-                action: elem.dataset.action,
-                target: elem.dataset.target,
-                rects: Array.from(elem.getClientRects())
-              })),
-            ...Array.from(doc.$$('a'))
-              .map(elem => ({
-                action: 'open-link',
-                target: elem.href,
-                rects: Array.from(elem.getClientRects())
-              })),
-          ];
+            let actionables = [
+              ...Array.from(doc.$$('[data-action]'))
+                .map(elem => ({
+                  action: elem.dataset.action,
+                  target: elem.dataset.target,
+                  rects: Array.from(elem.getClientRects())
+                })),
+              ...Array.from(doc.$$('a'))
+                .map(elem => ({
+                  action: 'open-link',
+                  target: elem.href,
+                  rects: Array.from(elem.getClientRects())
+                })),
+            ];
 
-          container.remove();
+            container.remove();
 
-          resolve([contentHeightDots, actionables]);
-        });
-      }, 1);
-    });
+            resolve([contentHeightDots, actionables]);
+          });
+        }, 1);
+      });
   }
 
   async _rasterize() {
@@ -188,13 +189,18 @@ if (window.DEBUG) {
 // static functions
 
 const SMALL_VIEW_STYLE_PARAMS = Object.freeze({
-  pMarginBottom: 0.12,
-  fontSize: 0.16,
-  lineHeight: 1.4,
+  pMarginBottom: 0.25,
+  paddingTop: 0.25,
+  paddingBottom: 1.3,
+  paddingHorizontal: 0.24,
+  fontSize: 0.17,
+  lineHeight: 1.65,
 });
 
 const REGULAR_VIEW_STYLE_PARAMS = Object.freeze({
+  paddingBottom: 0.22,
   pMarginBottom: 0.14,
+  paddingHorizontal: 0.12,
   fontSize: 0.18,
   lineHeight: 1.6,
 });
@@ -226,6 +232,20 @@ let _;
 class PageSource {
   constructor(source) {
     _(this)._source = source;
+
+    _(this)._smallViewStyleParams = Object.freeze(Object.assign({}, SMALL_VIEW_STYLE_PARAMS, {
+      paddingTop:
+        parseFloat(
+          getComputedStyle($('html')).getPropertyValue('--small-view-top-content-padding')
+        ) / REM_SCALE,
+
+      paddingHorizontal:
+        parseFloat(
+          getComputedStyle($('html')).getPropertyValue('--small-view-content-horizontal-padding')
+        ) / REM_SCALE,
+    }));
+
+    _(this)._regularViewStyleParams = REGULAR_VIEW_STYLE_PARAMS;
   }
 
   asRenderedPage(styleSheet, isSmallView, styleParams, abortSignal, fontDataURLs) {
@@ -233,7 +253,7 @@ class PageSource {
 
     Object.assign(
       styleParams,
-      isSmallView ? SMALL_VIEW_STYLE_PARAMS : REGULAR_VIEW_STYLE_PARAMS
+      isSmallView ? _(this)._smallViewStyleParams : _(this)._regularViewStyleParams
     );
 
     Object.entries(styleParams).forEach(([name, value]) => {

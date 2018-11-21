@@ -48,7 +48,7 @@ func parseFile(filepath string, cjk_chars map[rune]bool, latin_chars map[rune]bo
 	}
 
 	for _, char := range string(content) {
-		if char <= unicode.MaxLatin1 {
+		if char <= unicode.MaxLatin1 || isLatinFontChar(char) {
 			latin_chars[char] = true
 		} else {
 			cjk_chars[char] = true
@@ -70,4 +70,12 @@ func writeSubsetFile(chars map[rune]bool, filepath string) {
 	if err != nil {
 		panic("failed to write " + filepath)
 	}
+}
+
+func isLatinFontChar(char rune) bool {
+	switch char {
+	case '“', '”':
+		return true
+	}
+	return false
 }

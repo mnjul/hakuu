@@ -8,6 +8,7 @@
 ;(function(exports){
 
 const SMALL_VIEW_WIDTH_CUTOFF = 600;
+const WHEEL_LINE_HEIGHT = 30;
 
 function isSmallView() {
   return window.innerWidth < SMALL_VIEW_WIDTH_CUTOFF;
@@ -48,7 +49,7 @@ RainEngineClient = class {
         raindrops.canvas,
         contentCanvas,
         {
-          brightness: 1.04,
+          brightness: 0.985,
           alphaMultiply: 6,
           alphaSubtract: 3,
           minRefraction: 1,
@@ -86,9 +87,6 @@ if (window.DEBUG) {
 (function(){
 
 let _;
-
-const REM_SCALE = 100;
-const SMALL_VIEW_PADDING_TOP = 6;
 
 class CanvasController {
   constructor() {
@@ -134,9 +132,6 @@ class CanvasController {
     let thisAbortSignal = _(this)._currentAbortController.signal;
 
     let dppx = window.devicePixelRatio;
-    let paddingTop = isSmallView() ?
-      SMALL_VIEW_PADDING_TOP / REM_SCALE :
-      parseFloat(getComputedStyle($('#sidebar')).top) / REM_SCALE;
 
     _(this)._setCanvasSize();
     _(this)._prepareViewportPageCanvas();
@@ -167,11 +162,10 @@ class CanvasController {
     _(this)._pageOfCurrentWidth = (await _(this)._pageSourcePromise).asRenderedPage(
       styleSheet,
       isSmallView(),
-      {
+      Object.assign({
         dppx,
         widthDots: _(this)._viewport.width,
-        paddingTop,
-      },
+      }, !isSmallView() ? { paddingTop: parseFloat(getComputedStyle($('#sidebar')).top) / REM_SCALE} : {}),
       thisAbortSignal,
       fontDataURLs
     );
@@ -230,14 +224,16 @@ class CanvasController {
   _setCanvasSize() {
     let dppx = window.devicePixelRatio;
 
-    let viewportWidth = _(this)._viewport.getBoundingClientRect().width;
-    let viewportHeight = _(this)._viewport.getBoundingClientRect().height;
+    let {width: viewportWidth, height: viewportHeight} =
+      _(this)._viewport.getBoundingClientRect();
 
-    _(this)._viewport.width = viewportWidth * dppx;
-    _(this)._viewport.height = viewportHeight * dppx;
+    _(this)._viewportPageCanvas.width =
+      _(this)._viewport.width =
+      viewportWidth * dppx;
 
-    _(this)._viewportPageCanvas.width = _(this)._viewport.width;
-    _(this)._viewportPageCanvas.height = _(this)._viewport.height;
+    _(this)._viewportPageCanvas.height =
+      _(this)._viewport.height =
+      viewportHeight * dppx;
   }
 
   _prepareViewportPageCanvas() {
@@ -253,8 +249,8 @@ class CanvasController {
 
   _renderViewportPageCanvas() {
     let canvasCtx = _(this)._viewportPageCanvas.getContext('2d', {alpha: false});
-    let widthDots = _(this)._viewportPageCanvas.width;
-    let canvasHeightDots = _(this)._viewportPageCanvas.height;
+    let {width: widthDots, height: canvasHeightDots} =
+      _(this)._viewportPageCanvas;
     let drawingHeightDots = Math.min(
       _(this)._pageOfCurrentWidth.contentHeightDots, canvasHeightDots
     );
@@ -310,7 +306,11 @@ class CanvasController {
 
   _onWheel(evt) {
     let viewportHeightDots = _(this)._viewport.height;
-    let deltaMultiplier = [1, 30, viewportHeightDots][evt.deltaMode];
+    let deltaMultiplier = [
+      window.devicePixelRatio,
+      WHEEL_LINE_HEIGHT * window.devicePixelRatio,
+      viewportHeightDots
+    ][evt.deltaMode];
     _(this)._scrollBy(evt.deltaY * deltaMultiplier, evt);
   }
 

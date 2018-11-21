@@ -27,8 +27,13 @@ Blob.prototype.asDataURL = function() {
    reader.readAsDataURL(this); 
   });
 };
- 
-exports.DEBUG = false;
+
+Object.defineProperty(exports, 'isIOSOrSafari',
+  {value: !!navigator.platform.match(/iPhone|iPod|iPad/) || window.safari});
+
+Object.defineProperty(exports, 'DEBUG', {value: true});
+
+Object.defineProperty(exports, 'REM_SCALE', {value: 100});
 
 })(window);
 
