@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -32,6 +33,7 @@ const DstDirName = "./output/"
 const PagesDirName = "pages/"
 const FontsDirName = "assets/fonts/"
 const BgmDirName = "assets/bgm/"
+const ReviewImagesDirName = "assets/images/review/"
 const StylesDirName = "assets/styles/"
 const ScriptsDirName = "assets/scripts/"
 
@@ -51,24 +53,25 @@ func main() {
 	fmt.Println("> Preparing target direcory...")
 	os.RemoveAll(DstDirName)
 	os.MkdirAll(DstDirName, 0755)
-	os.MkdirAll(DstDirName+PagesDirName, 0755)
-	os.MkdirAll(DstDirName+FontsDirName, 0755)
-	os.MkdirAll(DstDirName+BgmDirName, 0755)
-	os.MkdirAll(DstDirName+StylesDirName, 0755)
-	os.MkdirAll(DstDirName+ScriptsDirName, 0755)
+	os.MkdirAll(path.Join(DstDirName, PagesDirName), 0755)
+	os.MkdirAll(path.Join(DstDirName, FontsDirName), 0755)
+	os.MkdirAll(path.Join(DstDirName, BgmDirName), 0755)
+	os.MkdirAll(path.Join(DstDirName, ReviewImagesDirName), 0755)
+	os.MkdirAll(path.Join(DstDirName, StylesDirName), 0755)
+	os.MkdirAll(path.Join(DstDirName, ScriptsDirName), 0755)
 
 	fmt.Println("> Copying fonts...")
-	copyDir("assets/fonts/")
+	copyDir(FontsDirName)
 
 	fmt.Println("> Copying pages...")
-	copyDir("pages/")
+	copyDir(PagesDirName)
 
 	fmt.Println("> Concatenating normalize.css + index.css...")
 	srcNormalizeCss := readFile("dep/normalize.css/normalize.css")
-	srcIndexCss := readFile(StylesDirName + "index.css")
+	srcIndexCss := readFile(path.Join(StylesDirName, "index.css"))
 
 	fmt.Println("> Writing index.css...")
-	writeFile(StylesDirName+"index.css", srcNormalizeCss+srcIndexCss)
+	writeFile(path.Join(StylesDirName, "index.css"), srcNormalizeCss+srcIndexCss)
 
 	fmt.Println("> Minifying index.css...")
 	minifyCss("index.css")
@@ -78,12 +81,12 @@ func main() {
 	buildIndexJsAndHtml()
 
 	fmt.Println("> Copying tech-blocker-1.js...")
-	copyFile(ScriptsDirName + "tech-blocker-1.js")
+	copyFile(path.Join(ScriptsDirName, "tech-blocker-1.js"))
 	fmt.Println("> Minifying tech-blocker-1.js...")
 	minifyJs("tech-blocker-1.js")
 
 	fmt.Println("> Copying tech-blocker-2.js...")
-	copyFile(ScriptsDirName + "tech-blocker-2.js")
+	copyFile(path.Join(ScriptsDirName, "tech-blocker-2.js"))
 	fmt.Println("> Minifying tech-blocker-2.js...")
 	minifyJs("tech-blocker-2.js")
 
@@ -94,7 +97,10 @@ func main() {
 	copyFile("favicon.png")
 
 	fmt.Println("> Copying bgm...")
-	copyDir("assets/bgm/")
+	copyDir(BgmDirName)
+
+	fmt.Println("> Copying images for review...")
+	copyDir(ReviewImagesDirName)
 }
 
 func buildIndexJsAndHtml() {
@@ -169,7 +175,7 @@ func buildIndexJsAndHtml() {
 	dstIndexJs = removeMarkedJs(dstIndexJs)
 
 	fmt.Println("> Writing concatenated index.js...")
-	writeFile(ScriptsDirName+"index.js", dstIndexJs)
+	writeFile(path.Join(ScriptsDirName, "index.js"), dstIndexJs)
 
 	fmt.Println("> Minifying index.js...")
 	minifyIndexJs("index.js")
@@ -201,7 +207,7 @@ func buildPagesCss() {
 		string(minifiedPagesCssRunes[rootDeclarationEndIndex:])
 
 	fmt.Println("> Writing pages.css...")
-	writeFile(StylesDirName+"pages.css", postprocessedPagesCss)
+	writeFile(path.Join(StylesDirName, "pages.css"), postprocessedPagesCss)
 }
 
 func runAndCheckCmd(cmd *exec.Cmd) {
@@ -225,20 +231,20 @@ func runAndGetCmdOutput(cmd *exec.Cmd) string {
 }
 
 // No recursive copying for now
-func copyDir(path string) {
-	fileInfos, err := ioutil.ReadDir(SrcDirName + path)
+func copyDir(pathAndName string) {
+	fileInfos, err := ioutil.ReadDir(path.Join(SrcDirName, pathAndName))
 
 	if err != nil {
-		panic("Failed to list " + SrcDirName + path)
+		panic("Failed to list " + path.Join(SrcDirName, pathAndName))
 	}
 
 	for _, fileInfo := range fileInfos {
-		_copyFile(SrcDirName+path+fileInfo.Name(), DstDirName+path+fileInfo.Name())
+		_copyFile(path.Join(SrcDirName, pathAndName, fileInfo.Name()), path.Join(DstDirName, pathAndName, fileInfo.Name()))
 	}
 }
 
-func copyFile(path string) {
-	_copyFile(SrcDirName+path, DstDirName+path)
+func copyFile(pathAndName string) {
+	_copyFile(path.Join(SrcDirName, pathAndName), path.Join(DstDirName, pathAndName))
 }
 
 func _copyFile(srcPath string, dstPath string) {
@@ -261,7 +267,7 @@ func _copyFile(srcPath string, dstPath string) {
 }
 
 func readFile(srcPath string) string {
-	content, err := ioutil.ReadFile(SrcDirName + srcPath)
+	content, err := ioutil.ReadFile(path.Join(SrcDirName, srcPath))
 
 	if err != nil {
 		panic(err)
@@ -271,38 +277,38 @@ func readFile(srcPath string) string {
 }
 
 func writeFile(dstPath string, content string) {
-	err := ioutil.WriteFile(DstDirName+dstPath, []byte(content), 0644)
+	err := ioutil.WriteFile(path.Join(DstDirName, dstPath), []byte(content), 0644)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func minifyCss(dstPath string) {
-	fileName := DstDirName + StylesDirName + dstPath
-	cmd := exec.Command("./node_modules/clean-css-cli/bin/cleancss", "-o", fileName, fileName)
+	fileName := path.Join(DstDirName, StylesDirName, dstPath)
+	cmd := exec.Command("./node_modules/.bin/cleancss", "-o", fileName, fileName)
 	runAndCheckCmd(cmd)
 }
 
 func minifySrcCssIntoString(srcPath string) string {
-	fileName := SrcDirName + StylesDirName + srcPath
-	cmd := exec.Command("./node_modules/clean-css-cli/bin/cleancss", fileName)
+	fileName := path.Join(SrcDirName, StylesDirName, srcPath)
+	cmd := exec.Command("./node_modules/.bin/cleancss", fileName)
 	return runAndGetCmdOutput(cmd)
 }
 
 func minifyJs(dstPath string) {
-	fileName := DstDirName + ScriptsDirName + dstPath
-	cmd := exec.Command("./node_modules/uglify-es/bin/uglifyjs", "-c", "-m", "-o", fileName, fileName)
+	fileName := path.Join(DstDirName, ScriptsDirName, dstPath)
+	cmd := exec.Command("./node_modules/.bin/terser", "-c", "-m", "-o", fileName, fileName)
 	runAndCheckCmd(cmd)
 }
 
 func minifyIndexJs(dstPath string) {
-	fileName := DstDirName + ScriptsDirName + dstPath
+	fileName := path.Join(DstDirName, ScriptsDirName, dstPath)
 	// UglifyJS doesn't know AbortController yet
 	cmd := exec.Command(
-		"./node_modules/uglify-es/bin/uglifyjs",
+		"./node_modules/.bin/terser",
 		"-c",
 		"-m",
-		"--mangle-props", `regex=/^(?!\$.*$).*/,reserved=['aborted', 'signal', 'Latin', 'CJK', 'medium', 'low', 'loud', 'silent', 'dppx', 'widthDots', 'paddingTop', 'paddingHorizontal', 'paddingBottom', 'pMarginBottom', 'fontSize', 'lineHeight', 'raining', '_raining', '_loading', '_audioAvailable', '_volumeLevel', '_currentPage']`,
+		"--mangle-props", `regex=/^(?!\$.*$).*/,reserved=['aborted', 'signal', 'Latin', 'CJK', 'medium', 'low', 'loud', 'silent', 'dppx', 'widthDots', 'paddingTop', 'paddingHorizontal', 'paddingBottom', 'pMarginBottom', 'fontSize', 'lineHeight', 'raining', '_raining', '_loading', '_audioAvailable', '_volumeLevel', '_currentPage', 'home', 'review', 'finale', 'DEBUG', 'REM_SCALE']`,
 		"-o", fileName,
 		fileName)
 	runAndCheckCmd(cmd)

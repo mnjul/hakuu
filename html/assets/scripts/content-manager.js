@@ -1,16 +1,16 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018 Min-Zhong Lu
+// Copyright (C) 2018-2020 Min-Zhong Lu
 
 'use strict';
 
 ;(function(exports){
 
 const FONTS = Object.seal({
-  Latin: 'latin.ttf',
-  CJK: 'cjk.otf',
+  Latin: 'latin.woff2',
+  CJK: 'cjk.woff2',
 });
 
-const PAGES = ['home', 'finale'];
+const PAGES = ['home', 'review', 'finale'];
 
 let _;
 
@@ -48,7 +48,7 @@ class ContentManager {
   }
 
   async _loadPage(name) {
-    return new window.PageSource(await (await _(this)._pageFetchPromises[name]).text());
+    return new window.PageSource(await (await _(this)._pageFetchPromises[name]).text(), name);
   }
 
   // Resolution of these fetch promises should be handled separately (as long

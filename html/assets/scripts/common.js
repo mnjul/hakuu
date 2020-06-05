@@ -1,5 +1,5 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018 Min-Zhong Lu
+// Copyright (C) 2018-2020 Min-Zhong Lu
 
 'use strict';
 
@@ -27,9 +27,6 @@ Blob.prototype.asDataURL = function() {
    reader.readAsDataURL(this); 
   });
 };
-
-Object.defineProperty(exports, 'isIOSOrSafari',
-  {value: !!navigator.platform.match(/iPhone|iPod|iPad/) || window.safari});
 
 Object.defineProperty(exports, 'DEBUG', {value: true});
 

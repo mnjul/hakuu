@@ -1,5 +1,5 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018 Min-Zhong Lu
+// Copyright (C) 2018-2020 Min-Zhong Lu
 
 'use strict';
 
@@ -98,15 +98,11 @@ class SiteController {
     });
   }
 
-  async _restart(initial) {
+  async _restart() {
     _(this)._loading = true;
     _(this)._canvasController.destroy();
     await _(this)._canvasController.start(_(this)._raining);
     _(this)._loading = false;
-
-    if (initial && isIOSOrSafari) {
-      setTimeout(_(this)._restart.bind(this));
-    }
   }
 
   _onReady() {
@@ -114,7 +110,7 @@ class SiteController {
 
     _(this)._canvasController.ready();
 
-    _(this)._switchPage(_(this)._initPageName, true);
+    _(this)._switchPage(_(this)._initPageName);
   }
 
   _onResize() {
@@ -169,16 +165,13 @@ class SiteController {
       promise.then(blob => {
         var styleElem = $e('style');
 
-        var format = _(this)._contentManager.fonts[fontName].endsWith('.otf') ?
-          'opentype': 'truetype';
-
         var url = URL.createObjectURL(blob);
 
         styleElem.textContent = `
           @font-face {
             font-family: 'MIH ${fontName.toUpperCase()}';
             font-weight: ${getComputedStyle($('body')).getPropertyValue('font-weight')};
-            src: url('${url}') format('${format}');
+            src: url('${url}') format('woff2');
           }
         `;
 
@@ -195,12 +188,12 @@ class SiteController {
     $('#volume-control > span[data-level="silent"]').click();
   }
 
-  async _switchPage(pageName, initial) {
+  async _switchPage(pageName) {
     _(this)._loading = true;
     let pageSourcePromise = _(this)._contentManager.getPageSourcePromise(pageName);
 
     _(this)._canvasController.pageSourcePromise = pageSourcePromise;
-    _(this)._restart(initial);
+    _(this)._restart();
 
     await pageSourcePromise;
     _(this)._currentPage = pageName;

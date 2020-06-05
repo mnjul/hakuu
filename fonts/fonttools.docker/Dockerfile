@@ -1,2 +1,6 @@
-FROM python:2.7
-RUN pip install fonttools
+FROM python:3.6
+RUN pip install fonttools cu2qu
+ADD https://raw.githubusercontent.com/fonttools/fonttools/master/Snippets/otf2ttf.py /
+RUN apt-get update && apt-get install -y woff2
+COPY run-fonts.sh /
+ENTRYPOINT ["/run-fonts.sh"]

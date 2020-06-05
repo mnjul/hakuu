@@ -1,5 +1,5 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018 Min-Zhong Lu
+// Copyright (C) 2018-2020 Min-Zhong Lu
 
 'use strict';
 
@@ -170,7 +170,7 @@ class CanvasController {
       fontDataURLs
     );
 
-    _(this)._fullPageBitmap = await _(this)._pageOfCurrentWidth.bitmapPromise;
+    _(this)._fullPageBitmap = await _(this)._pageOfCurrentWidth.imagePromise;
 
     _(this)._currentScrollOffsetDots = Number.isNaN(_(this)._currentScrollDepthRatio) ?
       0 :
@@ -311,7 +311,10 @@ class CanvasController {
       WHEEL_LINE_HEIGHT * window.devicePixelRatio,
       viewportHeightDots
     ][evt.deltaMode];
+
     _(this)._scrollBy(evt.deltaY * deltaMultiplier, evt);
+
+    evt.preventDefault();
   }
 
   _onTouchstart(evt) {

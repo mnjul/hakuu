@@ -1,5 +1,5 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018 Min-Zhong Lu
+// Copyright (C) 2018-2020 Min-Zhong Lu
 
 'use strict';
 
@@ -12,15 +12,16 @@ let Page;
 let _;
 
 Page = class {
-  constructor(pageSource, dppx, widthDots, abortSignal) {
+  constructor(pageSource, {dppx, widthDots}, abortSignal) {
     _(this)._doc = undefined;
     _(this)._dppx = dppx;
     _(this)._contentWidthDots = widthDots;
     _(this)._contentHeightDots = undefined;
+    _(this)._rasterizationDetector = new PageRasterizationDetector(dppx);
     _(this)._actionables = undefined;
-    _(this)._rasterizedBitmap = undefined;
+    _(this)._image = undefined;
 
-    this.bitmapPromise = new Promise(async resolve => {
+    this.imagePromise = new Promise(async resolve => {
       _(this)._doc = new DOMParser().parseFromString(pageSource, 'image/svg+xml');
 
       await _(this)._fetchImages();
@@ -31,9 +32,9 @@ Page = class {
 
       if (abortSignal.aborted) { resolve(); }
 
-      await _(this)._rasterize();
+      await _(this)._produceImage();
 
-      resolve(_(this)._rasterizedBitmap);
+      resolve(_(this)._image);
     });
   }
 
@@ -65,14 +66,13 @@ Page = class {
 
     imgElems.forEach((elem, idx) => {
       let imgBase64 = responses[idx];
-      // XXX: hardcoded mime
-      elem.setAttribute('src', `data:image/jpeg;base64,${imgBase64}`);
+      elem.setAttribute('src', imgBase64);
     });
   }
 
   async _computeSVGRendering() {
     let dppx = _(this)._dppx;
-    $('html').style.fontSize = `${dppx * 100}px`;
+    $('html').style.fontSize = `${dppx * REM_SCALE}px`;
 
     let doc = document.importNode(_(this)._doc.documentElement, true);
     let container = $e('div');
@@ -87,17 +87,21 @@ Page = class {
       })
     ));
 
-    [_(this)._contentHeightDots, _(this)._actionables] = await new Promise(
+    _(this)._rasterizationDetector.setBGColor(
+      getComputedStyle($('#svg-computer-body')).backgroundColor
+    );
+
+    await new Promise(
       resolve => {
         // It appears that for android, one requestAnimationFrame call is not
         // enough, and we need two separate return-to-event-queue constructs.
         setTimeout(() => {
           requestAnimationFrame(() => {
-            let contentHeightDots = Math.ceil(
+            _(this)._contentHeightDots = Math.ceil(
               doc.$('#svg-main-container').getBoundingClientRect().height
             );
 
-            let actionables = [
+            _(this)._actionables = [
               ...Array.from(doc.$$('[data-action]'))
                 .map(elem => ({
                   action: elem.dataset.action,
@@ -112,53 +116,45 @@ Page = class {
                 })),
             ];
 
+            _(this)._rasterizationDetector.setTargetPoints(
+              [
+                ...Array.from(doc.$$('.rasterization-detector-target')),
+                ...Array.from(doc.$$('img'))
+              ].map(elem => {
+                let rect = elem.getBoundingClientRect();
+                return {
+                  x: rect.left,
+                  y: rect.top,
+                };
+              })
+            );
+
             container.remove();
 
-            resolve([contentHeightDots, actionables]);
+            resolve();
           });
         }, 1);
       });
   }
 
-  async _rasterize() {
+  async _produceImage() {
     _(this)._doc.documentElement.setAttribute('width', _(this)._contentWidthDots);
     _(this)._doc.documentElement.setAttribute('height', _(this)._contentHeightDots);
 
     let serializer = new XMLSerializer();
     let img = new Image();
 
-    // not using utf8 + simple encodeuricomponent for data uri; seems incompatible with the utf-8 chars in the xml
-    // so we use a rather convolved way to achieve something like python's decode().
-    let url = 'data:image/svg+xml;base64,' + btoa(
-      unescape(encodeURIComponent(serializer.serializeToString(_(this)._doc)))
-    );
+    let url =
+      'data:image/svg+xml;charset=utf-8,' +
+      encodeURIComponent(serializer.serializeToString(_(this)._doc));
 
-    // chrome complains about tainted canvas, so we can't use this:
-    // img.crossOrigin = 'anonymous';
-    // let url = URL.createObjectURL(new Blob([_(this)._doc], { type: 'image/svg+xml' }));
-
-    _(this)._rasterizedBitmap = await new Promise((resolve, reject) => {
+    _(this)._image = await new Promise((resolve, reject) => {
       img.src = url;
       img.addEventListener('error', reject);     
-      img.addEventListener('load', () => {
-        // URL.revokeObjectURL(url);
-        let canvas = $e('canvas');
-        canvas.width = _(this)._contentWidthDots;
-        canvas.height = _(this)._contentHeightDots;
-        canvas.getContext('2d', {alpha: false}).drawImage(img, 0, 0);
-
-        // ImageBitmap is more efficient, but unsupported by Edge (at least on Windows 10 1803)
-        // or Safari (at least on macOS High Sierra), so we may resolve into a
-        // canvas instead.
-        // We're cheating here, since the way we consume the resultant object
-        // is the same whether it's an ImageBitmap or a canvas. Thanks duck-typing!
-        if (window.createImageBitmap) {
-          createImageBitmap(canvas, 0, 0, _(this)._contentWidthDots, _(this)._contentHeightDots)
-            .then(imgBmp => resolve(imgBmp))
-            .catch(e => reject(e));
-        } else {
-          resolve(canvas);
-        }
+      
+      img.addEventListener('load', async () => {
+        await _(this)._rasterizationDetector.detect(img);
+        resolve(img);
       });
     });
   }
@@ -183,10 +179,121 @@ if (window.DEBUG) {
 
 })();
 
+let PageRasterizationDetector;
+
+(function(){
+
+let _;
+
+const RASTERIZE_TIMEOUT_MS = 200;
+const RASTERIZE_DETECT_SIZE = 20;
+const RASTERIZE_DETECT_OFFSET = RASTERIZE_DETECT_SIZE / 2;
+
+PageRasterizationDetector = class {
+  constructor(dppx) {
+    _(this)._targetPoints = [];
+    _(this)._dppx = dppx;
+    _(this)._bgColorRGB = [];
+  }
+
+  setTargetPoints(points) {
+    _(this)._targetPoints = points;
+  }
+
+  setBGColor(bgColor) {
+    _(this)._bgColorRGB =
+      bgColor.substr('rgb('.length).split(',')
+        .map(val => val.trim())
+        .map(val => parseInt(val));
+  }
+
+  async detect(image) {
+    const promises =
+      _(this)._targetPoints.map(point => _(this)._detectPoint(image, point));
+    return Promise.all(promises);
+  }
+
+  _detectPoint(image, point) {
+    return new Promise((resolve) => {
+      const detectSize = RASTERIZE_DETECT_SIZE * _(this)._dppx;
+      const detectOffset = RASTERIZE_DETECT_OFFSET * _(this)._dppx;
+
+      let canvas = $e('canvas');
+      canvas.width = canvas.height = detectSize;
+      let ctx = canvas.getContext('2d', {alpha: false});
+
+      let rasterizationStart = performance.now();
+      let rasterizationTries = 0;
+
+      const tryRasterize = () => {
+        rasterizationTries++;
+
+        ctx.drawImage(image,
+                      point.x + detectOffset, point.y + detectOffset,
+                      detectSize, detectSize,
+                      0, 0,
+                      detectSize, detectSize);
+
+        let {data: sample} = ctx.getImageData(0, 0, detectSize, detectSize);
+
+        let sampleRGBs = [];
+        for (let i = 0; i < sample.length; i +=4) {
+          sampleRGBs.push([sample[i], sample[i+1], sample[i+2]]);
+        }
+
+        let detectedRasterization =
+          sampleRGBs.some(([sampleR, sampleG, sampleB]) => {
+            let [bgR, bgG, bgB] = _(this)._bgColorRGB;
+            return sampleR !== bgR ||
+                   sampleG !== bgG ||
+                   sampleB !== bgB;
+          });
+
+        if (detectedRasterization) {
+          console.log(`Rasterization detected after ${rasterizationTries} tries for x=${point.x}, y=${point.y}`);
+          resolve();
+        } else {
+          if (performance.now() - rasterizationStart > RASTERIZE_TIMEOUT_MS) {
+            console.warn(`Rasterization timed out after ${rasterizationTries} tries for x=${point.x}, y=${point.y}, resolving anyway`);
+            resolve();
+          } else {
+            requestAnimationFrame(tryRasterize);
+          }
+        }
+      }
+
+      requestAnimationFrame(tryRasterize);         
+    });
+  }
+};
+
+_ = window.createInternalFunction(PageRasterizationDetector);
+if (window.DEBUG) {
+  window.internalFunctions[PageRasterizationDetector] = _;
+  exports.PageRasterizationDetector = PageRasterizationDetector;
+}
+
+})();
 
 (function(){
 
 // static functions
+
+const PAGE_CLASSES_GETTER = Object.freeze({
+  home: () => [],
+  review: ({isSmallView, width}) => {
+    if (isSmallView) {
+      return ['review-small'];
+    }
+
+    if (width <= 840) {
+      return ['review-narrow'];
+    }
+
+    return [];
+  },
+  finale: () => [],
+})
 
 const SMALL_VIEW_STYLE_PARAMS = Object.freeze({
   pMarginBottom: 0.25,
@@ -198,7 +305,7 @@ const SMALL_VIEW_STYLE_PARAMS = Object.freeze({
 });
 
 const REGULAR_VIEW_STYLE_PARAMS = Object.freeze({
-  paddingBottom: 0.22,
+  paddingBottom: 0.6,
   pMarginBottom: 0.14,
   paddingHorizontal: 0.12,
   fontSize: 0.18,
@@ -230,8 +337,9 @@ function insertFonts(source, fontDataURLs) {
 let _;
 
 class PageSource {
-  constructor(source) {
+  constructor(source, name) {
     _(this)._source = source;
+    _(this)._name = name;
 
     _(this)._smallViewStyleParams = Object.freeze(Object.assign({}, SMALL_VIEW_STYLE_PARAMS, {
       paddingTop:
@@ -249,7 +357,9 @@ class PageSource {
   }
 
   asRenderedPage(styleSheet, isSmallView, styleParams, abortSignal, fontDataURLs) {
-    let source = _(this)._source.replace('/*PAGES-CSS*/', styleSheet);
+    let classes = PAGE_CLASSES_GETTER[_(this)._name]({isSmallView, width: styleParams.widthDots / styleParams.dppx});
+
+    let source = _(this)._source.replace('/*PAGES-CSS*/', styleSheet).replace('/*PAGES-CLASSES*/', classes.join(' '));
 
     Object.assign(
       styleParams,
@@ -264,7 +374,7 @@ class PageSource {
 
     source = wrapSVGSource(source);
 
-    return new Page(source, styleParams.dppx, styleParams.widthDots, abortSignal);
+    return new Page(source, styleParams, abortSignal);
   }
 }
 

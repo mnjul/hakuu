@@ -1,11 +1,11 @@
 {
   "private": true,
   "devDependencies": {
-    "clean-css-cli": "^4.1.11",
-    "csslint": "^1.0.5",
+    "clean-css-cli": "^4.3.0",
     "eslint": "^4.19.1",
-    "stylelint": "^9.2.0",
-    "stylelint-config-standard": "^18.2.0",
-    "uglify-es": "^3.3.9"
-  }
+    "stylelint": "^9.10.1",
+    "stylelint-config-standard": "^18.3.0",
+    "terser": "^4.7.0"
+  },
+  "dependencies": {}
 }

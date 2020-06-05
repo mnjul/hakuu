@@ -1,6 +1,6 @@
 /*
  * This is part of Hakuu, a web site, and is licensed under AGPLv3.
- * Copyright (C) 2018 Min-Zhong Lu
+ * Copyright (C) 2018-2020 Min-Zhong Lu
  */
 
 :root {
@@ -27,13 +27,13 @@ svg, html {
 @font-face {
   font-family: 'MIH Latin';
   font-weight: 200;
-  src: url('/*!%LATINFONT%*/0') format('truetype');
+  src: url('/*!%LATINFONT%*/0') format('woff2');
 }
 
 @font-face {
   font-family: 'MIH CJK';
   font-weight: 200;
-  src: url('/*!%CJKFONT%*/0') format('opentype');
+  src: url('/*!%CJKFONT%*/0') format('woff2');
 }
 
 #svg-computer-body, #svg-computer-body * {
@@ -50,7 +50,7 @@ svg, html {
 
 #svg-main-container {
    width: var(--width);
-   font-family: 'MIH Latin', 'Cormorant Infant', 'MIH CJK', 'Source Han Serif', serif;
+   font-family: 'MIH Latin', 'MIH CJK', serif;
    font-weight: 200;
    font-size: var(--font-size);
    line-height: var(--line-height);
@@ -76,4 +76,117 @@ a {
 
 #finale-declaration p {
   line-height: 1.2;
+}
+
+.review-version {
+  display: grid;
+  grid-template-columns: 2.16rem auto;
+  grid-template-rows: auto auto;
+  grid-template-areas: 
+    'info image'
+    '. content';
+  column-gap: 0.2rem;
+  row-gap: 0.18rem;
+
+  margin-top: 1.2rem;
+}
+
+.review-version:first-of-type {
+  margin-top: 0.58rem;
+}
+
+.review-version-info {
+  grid-area: info;
+  justify-self: end;
+  align-self: end;
+  text-align: right;
+  line-height: 1;
+}
+
+.review-version-name {
+  font-size: 0.22rem;
+}
+
+.review-version-noname {
+  margin-right: -0.6em;
+}
+
+.review-version-date, .review-version-svcn {
+  font-size: 0.15rem;
+  line-height: 1.8;
+}
+
+.review-version-svcn::after {
+  content: '/';
+  margin: 0 0.8ch;
+  font-size: 80%;
+}
+
+.review-version img {
+  grid-area: image;
+  width: 74%;
+  box-shadow: 0 0 2px 1px #f0f0f0;
+}
+
+.review-version-content {
+  grid-area: content;
+}
+
+.review-narrow .review-version {
+  grid-template-areas: 
+    'info image'
+    'content content';
+}
+
+.review-narrow .review-version img {
+  width: 100%;
+}
+
+.review-small .review-version {
+  grid-template-columns: auto;
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    'info'
+    'image'
+    'content';
+  row-gap: 0.12rem;
+
+  margin-top: 0.94rem;
+  --horizontal-offset: calc(-1 * var(--padding-horizontal));
+  margin-left: var(--horizontal-offset);
+  margin-right: var(--horizontal-offset);
+}
+
+.review-small .review-version:first-of-type {
+  margin-top: 0.74rem;
+}
+
+.review-small .review-version-info {
+  justify-self: center;
+  align-self: center;
+  text-align: center;
+}
+
+.review-small .review-version-name {
+  font-size: 0.22rem;
+}
+
+.review-small .review-version-noname {
+  margin-right: 0;
+}
+
+.review-small .review-version-date,
+.review-small .review-version-svcn {
+  font-size: 0.16rem;
+  line-height: 2;
+}
+
+.review-small .review-version img {
+  grid-area: image;
+  width: 100%;
+  margin-bottom: 0.06rem;
+}
+
+.review-small .review-version-content {
+  padding: 0 var(--padding-horizontal);
 }
