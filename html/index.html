@@ -5,6 +5,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <script defer src="assets/scripts/tech-blocker-1.js" class="tech-blocker"></script>
+  <script defer src="assets/scripts/tech-blocker-2.js" class="tech-blocker"></script>  
   <meta charset="utf-8" />
   <meta name="description" content="Demo website">
   <meta lang="robots" content="noindex, nofollow, noarchive, nosnippet" />
@@ -23,8 +25,9 @@
   <script defer src="assets/scripts/index.js"></script>
 </head>
 <body>
+  <div id="tech-blocker-msg" class="tech-blocker">This website requires latest versions of Mozilla Firefox, Google Chrome, Microsoft Edge, Safari, or latest mobile operating systems.<br /><br />Technical quesitons? Discuss at <a href="https://github.com/mnjul/hakuu/issues" target="_blank">GitHub repo's Issues</a></div>
   <aside id="small-view-header">
-    <span id="small-view-header-page-title"></span>
+    <h1 id="small-view-header-page-title"></h1>
     <div class="loading-indicator">
       <span></span><span></span><span></span>
     </div>
@@ -32,13 +35,15 @@
   <aside id="sidebar">
     <nav id="main-menu" class="sidebar-actionable">
       <section class="main-menu-section">
-        <span data-page="home">前言</span>
+        <li data-page="preface">序</li>
       </section>
       <section class="main-menu-section">
-          <span data-page="review">網站過去</span>
-        </section>
+        <li data-page="portrayal">描寫</li>
+        <li data-page="moment">瞬</li>
+      </section>
       <section class="main-menu-section">
-        <span data-page="finale">結語</span>
+        <li data-page="postface">跋</li>
+        <li data-page="appendix">附錄</li>
       </section>
     </nav>
     <section id="sidebar-controls" class="sidebar-actionable">
@@ -53,12 +58,9 @@
       <span></span><span></span><span></span>
     </div>
   </aside>
-  <section id="main">
+  <main id="main">
     <canvas id="viewport"></canvas>
-  </section>
+  </main>
   <div id="small-view-sidebar-toggle"></div>
-  <div id="tech-blocker-msg" class="tech-blocker">This website requires latest versions of Mozilla Firefox, Google Chrome, Microsoft Edge, Safari, or latest mobile operating systems.<br /><br />Technical quesitons? Discuss at <a href="https://github.com/mnjul/hakuu/issues" target="_blank">GitHub repo's Issues</a></div>
-  <script src="assets/scripts/tech-blocker-1.js" class="tech-blocker"></script>
-  <script src="assets/scripts/tech-blocker-2.js" class="tech-blocker"></script>
 </body>
 </html>

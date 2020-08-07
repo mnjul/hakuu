@@ -9,6 +9,7 @@
     let {c: b} = a;
     let d = [];
     let e = [...d];
+    let f = [e].flat();
 
     let canvas = document.createElement('canvas');
     if (['webgl', 'experimental-webgl'].every(type => !canvas.getContext(type))) {
@@ -18,7 +19,7 @@
     clearTimeout(window.esBlockerTimeout);  
     Array.from(document.querySelectorAll('.tech-blocker')).forEach(elem => {
       elem.dataset.b = b;
-      elem.dataset.e = e;
+      elem.dataset.e = f;
       elem.remove();
     });
   }

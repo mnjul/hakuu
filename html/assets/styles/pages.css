@@ -9,8 +9,8 @@
   --padding-horizontal: /*!%PADDINGHORIZONTAL%*/0rem;
   --padding-top: /*!%PADDINGTOP%*/0rem;
   --padding-bottom: /*!%PADDINGBOTTOM%*/0rem;
-  --p-margin-bottom: /*!%PMARGINBOTTOM%*/0rem;
   --font-size: /*!%FONTSIZE%*/0rem;
+  --h2-font-size: /*!%H2FONTSIZE%*/0rem;
   --line-height: /*!%LINEHEIGHT%*/0;
 }
 
@@ -20,7 +20,7 @@
   box-sizing: border-box;
 }
 
-svg, html {
+svg {
   font-size: calc(var(--dppx) * 100px); /* multiply by 100 to work around user-agent's minimum font sizes */
 }
 
@@ -36,6 +36,18 @@ svg, html {
   src: url('/*!%CJKFONT%*/0') format('woff2');
 }
 
+@font-face {
+  font-family: 'MIH Latin Sans';
+  font-weight: 400;
+  src: url('/*!%LATINSANSFONT%*/0') format('woff2');
+}
+
+@font-face {
+  font-family: 'MIH CJK Sans';
+  font-weight: 400;
+  src: url('/*!%CJKSANSFONT%*/0') format('woff2');
+}
+
 #svg-computer-body, #svg-computer-body * {
    box-sizing: border-box;
 }
@@ -49,36 +61,135 @@ svg, html {
 }
 
 #svg-main-container {
+  --letter-spacing: 0.01rem;
+
    width: var(--width);
    font-family: 'MIH Latin', 'MIH CJK', serif;
    font-weight: 200;
    font-size: var(--font-size);
    line-height: var(--line-height);
    text-rendering: optimizeLegibility;
-   letter-spacing: 0.01rem;
+   letter-spacing: var(--letter-spacing);
    padding: var(--padding-top) var(--padding-horizontal) var(--padding-bottom);
+   font-synthesis: none;
+}
+
+blockquote {
+  font-family: 'MIH Latin Sans', 'MIH CJK Sans', monospace;
+  font-weight: 400;
+  letter-spacing: 0.005rem;
+  margin: 0;
+  color: hsl(0, 0%, 40%);
+}
+
+article:not(:first-of-type) {
+  margin-top: 12em;
 }
 
 p {
   margin-top: 0;
-  margin-bottom: var(--p-margin-bottom);
+  margin-bottom: 1.5em;
+}
+
+p:not(.no-indent) {
+  text-indent: calc(2em + calc(var(--letter-spacing) * 2));
 }
 
 p:last-child {
   margin-bottom: 0;
 }
 
+blockquote.commentary p {
+  text-indent: 0;
+  margin-left: calc(4em + calc(var(--letter-spacing) * 4));
+  margin-right: calc(4em + calc(var(--letter-spacing) * 4));
+}
+
+blockquote:not(:last-child) {
+  margin-bottom: 1.5em;
+}
+
+.consecutive-blockquotes blockquote:not(:last-child) {
+  margin-bottom: 6em;
+}
+
+.page-small blockquote.commentary p {
+  margin-left: calc(2em + calc(var(--letter-spacing) * 2));
+  margin-right: calc(2em + calc(var(--letter-spacing) * 2)); 
+}
+
 a {
   -webkit-text-decoration: dashed underline hsl(0, 0%, 50%);
+  -webkit-text-underline-offset: 0.5ex;
   text-decoration: dashed underline hsl(0, 0%, 50%);
+  text-underline-offset: 0.5ex;
   color: hsl(0, 0%, 30%); /* normalize.css not doing this for edge */
 }
 
-#finale-declaration p {
-  line-height: 1.2;
+blockquote a {
+  color: hsl(0, 0%, 40%);
 }
 
-.review-version {
+.in-page-menu {
+  font-size: 93.75%;
+
+  margin-bottom: 6em;
+
+  line-height: 1.75;
+}
+
+.in-page-menu li {
+  list-style: none;
+  margin-left: 3em;
+}
+
+.in-page-menu span {
+  display: block;
+
+}
+
+.in-page-menu li + span {
+  margin-top: 2em;
+}
+
+h2 {
+  font-weight: 200;
+  font-size: var(--h2-font-size);
+  margin-bottom: 2em;
+}
+
+.article-subtitle {
+  display: block;
+  font-size: var(--font-size);
+  margin-left: var(--article-subtitle-margin-left);
+}
+
+.portrayal-separator {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+  margin-left: 6em;
+  border: none;
+  border-top: 0.005rem solid hsl(0, 0%, 30%);
+  width: 8em;
+}
+
+.portrayal-unbreakable {
+  white-space: nowrap;
+  word-break: keep-all;
+  letter-spacing: 0;
+}
+
+.postface-declaration p {
+  line-height: 1.5;
+  margin-bottom: 1.5em;
+  font-size: 93.75%;
+}
+
+.postface-declaration-unit {
+  white-space: nowrap;
+}
+
+.appendix-version {
   display: grid;
   grid-template-columns: 2.16rem auto;
   grid-template-rows: auto auto;
@@ -91,11 +202,11 @@ a {
   margin-top: 1.2rem;
 }
 
-.review-version:first-of-type {
+.appendix-version:first-of-type {
   margin-top: 0.58rem;
 }
 
-.review-version-info {
+.appendix-version-info {
   grid-area: info;
   justify-self: end;
   align-self: end;
@@ -103,46 +214,47 @@ a {
   line-height: 1;
 }
 
-.review-version-name {
+.appendix-version-name {
   font-size: 0.22rem;
+  margin: 0;
 }
 
-.review-version-noname {
+.appendix-version-noname {
   margin-right: -0.6em;
 }
 
-.review-version-date, .review-version-svcn {
+.appendix-version-date, .appendix-version-svcn {
   font-size: 0.15rem;
   line-height: 1.8;
 }
 
-.review-version-svcn::after {
+.appendix-version-svcn::after {
   content: '/';
   margin: 0 0.8ch;
   font-size: 80%;
 }
 
-.review-version img {
+.appendix-version img {
   grid-area: image;
   width: 74%;
-  box-shadow: 0 0 2px 1px #f0f0f0;
+  box-shadow: 0 0 0.02rem 0.01rem #f0f0f0;
 }
 
-.review-version-content {
+.appendix-version-content {
   grid-area: content;
 }
 
-.review-narrow .review-version {
+.appendix-narrow .appendix-version {
   grid-template-areas: 
     'info image'
     'content content';
 }
 
-.review-narrow .review-version img {
+.appendix-narrow .appendix-version img {
   width: 100%;
 }
 
-.review-small .review-version {
+.page-small .appendix-version {
   grid-template-columns: auto;
   grid-template-rows: auto auto auto;
   grid-template-areas:
@@ -157,36 +269,36 @@ a {
   margin-right: var(--horizontal-offset);
 }
 
-.review-small .review-version:first-of-type {
+.page-small .appendix-version:first-of-type {
   margin-top: 0.74rem;
 }
 
-.review-small .review-version-info {
+.page-small .appendix-version-info {
   justify-self: center;
   align-self: center;
   text-align: center;
 }
 
-.review-small .review-version-name {
+.page-small .appendix-version-name {
   font-size: 0.22rem;
 }
 
-.review-small .review-version-noname {
+.page-small .appendix-version-noname {
   margin-right: 0;
 }
 
-.review-small .review-version-date,
-.review-small .review-version-svcn {
+.page-small .appendix-version-date,
+.page-small .appendix-version-svcn {
   font-size: 0.16rem;
   line-height: 2;
 }
 
-.review-small .review-version img {
+.page-small .appendix-version img {
   grid-area: image;
   width: 100%;
   margin-bottom: 0.06rem;
 }
 
-.review-small .review-version-content {
+.page-small .appendix-version-content {
   padding: 0 var(--padding-horizontal);
 }

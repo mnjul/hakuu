@@ -15,7 +15,7 @@ detailing the process of making Hakuu.
 
 # Whereas...
 
-## ECMAScript 2017 (aka. ES8) is served as-is, without transpiling
+## ECMAScript 2019 is served as-is, without transpiling
 
 Of course, I know there are folks still using Internet Explorer, older versions
 of Firefox ESR, iOS or Android, or even Windows Phones, for legitimate or
@@ -31,17 +31,18 @@ Additionally, transpilers are best at dealing with syntactic sugars. They can't
 100% replicate the functionality of proxies, promises (and by extension async
 constructs), weak reference-enabled containers, among others.
 
-Please note I'm saying this in mid-2018. Latest Chrome (on any planform
+Please note I started saying this from mid-2018; latest Chrome (on any planform
 including latest Android), Firefox, Safari (on any platform including latest
-iOS), and Edge are fully supported. This leaves me two major user camps that
-have trouble accessing my site: (1) those with devices that they don't own and
-can't upgrade and modify (e.g. pre-Windows 10 machines that users can't install
-Chrome of Firefox) --- these are usually computers managed by institutions. 
-lease just view my website at home or on your personal device (again, Hakuu is
-now fully mobile friendly); (2) those on devices that they can't or don't want
-to upgrade to the latest version of the OS --- this is the broken part of the
-computing ecosystem that Intel/AMD/Microsoft/Apple/Google has to fix (for x86
-desktops/laptops, iOS devices and Android devices).
+iOS), and other Chromium-derived browsers are fully supported. This leaves me
+with two major user camps that have trouble accessing my site: (1) those with
+devices that they don't own and can't upgrade and modify (e.g. pre-Windows 10
+machines that users can't install Chrome of Firefox) --- these are usually
+computers managed by institutions. Please just view my website at home or on
+your personal device (again, Hakuu is now fully mobile friendly); (2) those on
+devices that they can't or don't want to upgrade to the latest version of the OS
+--- this is the broken part of the computing ecosystem that
+Intel/AMD/Microsoft/Apple/Google has to fix (for x86 desktops/laptops/tablets,
+Apple silicon-based devices, and Android devices).
 
 ## Use of Golang for scripting
 
@@ -56,9 +57,9 @@ to spend three days doing something unfamiliar and messing around with runes.
 (I do love the concept of runes, which reminds me of when I worked on FxOS
 keyboard app.)
 
-(Ialso used Hakuu to learn Docker. There used to be a paragraph here about why
+(I also used Hakuu to learn Docker. There used to be a paragraph here about why
 using Docker is not necessary, but I've since incorporated a woff2 library for
-font subsetting, and I now need a docker image for sandboxing woff2 binaries.)
+font subsetting, and I now do need a docker image for sandboxing woff2 binaries.)
 
 ## There is only a hollow npm package.json
 `package.json` is only used to conveniently define needed packages during
@@ -75,7 +76,7 @@ pretty much everything thanks to JavaScript's design in its earlier versions).
 Nowadays I'm less confident to make that assertion if people learn and write
 everything from scratch in ES7/8 (and the lingering effect of my original
 dislike for non-web JS would be, for example, my choosing Golang for the purpose
-of  giving myself challenges, instead of nodejs.)
+of giving myself challenges, instead of nodejs.)
 
 # Content
 This repo does not have the actual content from Hakuu, as such content is the

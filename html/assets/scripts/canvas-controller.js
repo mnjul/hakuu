@@ -8,7 +8,10 @@
 ;(function(exports){
 
 const SMALL_VIEW_WIDTH_CUTOFF = 600;
-const WHEEL_LINE_HEIGHT = 30;
+const INNER_PAGE_SCROLL_TOP_MARGIN = 20;
+const INNER_PAGE_SCROLL_MAX_NUM_PASSES = 30;
+const INNER_PAGE_SCROLL_SPEED_ALPHA = 5;
+const INNER_PAGE_SCROLL_SPEED_DELTA = 20;
 
 function isSmallView() {
   return window.innerWidth < SMALL_VIEW_WIDTH_CUTOFF;
@@ -97,13 +100,16 @@ class CanvasController {
     _(this)._pageSourcePromise = undefined;
 
     _(this)._pageOfCurrentWidth = undefined;
+    _(this)._lastWidthDots = undefined;
+    _(this)._lastPageSourcePromise = undefined;
 
     _(this)._bgColor = undefined;
+
+    _(this)._scrollRequestAnimationFrameId = undefined;
 
     _(this)._currentAbortController = new AbortController();
 
     _(this)._currentScrollOffsetDots = 0;
-    _(this)._currentScrollDepthRatio = 0;
 
     _(this)._fullPageBitmap = undefined;
     _(this)._viewportPageCanvas = $e('canvas');
@@ -111,88 +117,40 @@ class CanvasController {
 
     _(this)._lastTouchStartY = 0;
 
-    _(this)._onWheelBound = _(this)._onWheel.bind(this);
-    _(this)._onTouchstartBound = _(this)._onTouchstart.bind(this);
-    _(this)._onTouchmoveBound = _(this)._onTouchmove.bind(this);
-    _(this)._onTouchendBound = _(this)._onTouchend.bind(this);
+    _(this)._onScrollBound = _(this)._onScroll.bind(this);
+
     _(this)._onMousemoveBound = _(this)._onMousemove.bind(this);
     _(this)._onClickBound = _(this)._onClick.bind(this);
-
-    _(this)._isLastTouchOnActionable = undefined;
   }
 
   ready() {
     _(this)._viewport = $('#viewport');
-    _(this)._bgColor = getComputedStyle($('body')).backgroundColor;
+    _(this)._bgColor = $computedStyle('body', 'background-color');
   }
 
-  async start(raining) {
+  async start(raining, resetScroll) {
+    let dppx = window.devicePixelRatio;
+
     _(this)._currentAbortController.abort();
     _(this)._currentAbortController = new AbortController();
     let thisAbortSignal = _(this)._currentAbortController.signal;
 
-    let dppx = window.devicePixelRatio;
-
     _(this)._setCanvasSize();
     _(this)._prepareViewportPageCanvas();
 
-    // this is tricky: in Promise.all we'll have to convert _fontBlobPromises
-    // values to an array; this means we must be able to get _fontBlobPromises
-    // keys with integer indices, while object keys don't have guaranteed order.
-    // (We can alternatively use Maps though.)
-    let fontNames = Object.keys(_(this)._fontBlobPromises);
-    let fontDataURLArray = await Promise.all(
-      (await Promise.all(
-        fontNames.map(fontName => _(this)._fontBlobPromises[fontName])
-      )).map(blob => blob.asDataURL())
-    );
+    await Promise.all([
+      _(this)._preparePageBitmap(thisAbortSignal, dppx),
+      _(this)._prepareRainEngineClient(dppx, raining),
+    ]);
 
     if (thisAbortSignal.aborted) { return; }
 
-    let styleSheet = await _(this)._pageStyleSheetPromise;
-
-    if (thisAbortSignal.aborted) { return; }
-
-    let fontDataURLs = {};
-
-    fontNames.forEach((fontName, idx) => {
-      fontDataURLs[fontName] = fontDataURLArray[idx];
-    });
-
-    _(this)._pageOfCurrentWidth = (await _(this)._pageSourcePromise).asRenderedPage(
-      styleSheet,
-      isSmallView(),
-      Object.assign({
-        dppx,
-        widthDots: _(this)._viewport.width,
-      }, !isSmallView() ? { paddingTop: parseFloat(getComputedStyle($('#sidebar')).top) / REM_SCALE} : {}),
-      thisAbortSignal,
-      fontDataURLs
-    );
-
-    _(this)._fullPageBitmap = await _(this)._pageOfCurrentWidth.imagePromise;
-
-    _(this)._currentScrollOffsetDots = Number.isNaN(_(this)._currentScrollDepthRatio) ?
-      0 :
-      _(this)._currentScrollDepthRatio *
-       (_(this)._pageOfCurrentWidth.contentHeightDots -
-        _(this)._viewport.height);
-
-    if (thisAbortSignal.aborted) { return; }
+    if (resetScroll) {
+      _(this)._currentScrollOffsetDots = 0;
+      document.documentElement.scrollTop = 0;
+    }
 
     _(this)._renderViewportPageCanvas();
-
-    _(this)._rainEngineClient = new RainEngineClient(
-      _(this)._viewportPageCanvas,
-      _(this)._viewport,
-      raining,
-      dppx
-    );
-
-    await _(this)._rainEngineClient.constructsPromise;
-
-    if (thisAbortSignal.aborted) { return; }
-
     _(this)._rainEngineClient.raindrops.clearDrops();
     _(this)._rainEngineClient.renderer.updateTextures();
 
@@ -202,6 +160,8 @@ class CanvasController {
   destroy() {
     _(this)._detachEvents();
 
+    clearInterval(_(this)._scrollRequestAnimationFrameId);
+
     if (_(this)._rainEngineClient) {
       _(this)._rainEngineClient.destroy();
     }
@@ -210,7 +170,6 @@ class CanvasController {
 
   set pageSourcePromise(pageSourcePromise) {
     _(this)._pageSourcePromise = pageSourcePromise;
-    _(this)._currentScrollDepthRatio = 0;
   }
 
   set fontBlobPromises(fontBlobPromises) {
@@ -245,128 +204,117 @@ class CanvasController {
                         _(this)._viewportPageCanvas.width,
                         _(this)._viewportPageCanvas.height
                       );
+    canvasCtx = _(this)._viewport.getContext('webgl', {alpha: false}) || _(this)._viewport.getContext('experimental-webgl', {alpha: false});
+    canvasCtx.clearColor(0.9804, 0.9804, 0.9804, 1.0);
+    canvasCtx.viewport(0, 0, canvasCtx.drawingBufferWidth, canvasCtx.drawingBufferHeight);
+    canvasCtx.clear(canvasCtx.COLOR_BUFFER_BIT);
   }
 
   _renderViewportPageCanvas() {
     let canvasCtx = _(this)._viewportPageCanvas.getContext('2d', {alpha: false});
     let {width: widthDots, height: canvasHeightDots} =
       _(this)._viewportPageCanvas;
+
+      canvasCtx.fillStyle = _(this)._bgColor;
+      canvasCtx.fillRect(
+                          0,
+                          0,
+                          widthDots,
+                          canvasHeightDots
+                        );
+  
+
     let drawingHeightDots = Math.min(
       _(this)._pageOfCurrentWidth.contentHeightDots, canvasHeightDots
     );
 
     // - 1 to get around with chrome's mysterious 1px black line at the bottom
-    canvasCtx.drawImage(
-      _(this)._fullPageBitmap,
-      0, _(this)._currentScrollOffsetDots, widthDots, drawingHeightDots - 1,
-      0, 0, widthDots, drawingHeightDots
+
+    if (_(this)._currentScrollOffsetDots >= 0) {
+      canvasCtx.drawImage(
+        _(this)._fullPageBitmap,
+        0, _(this)._currentScrollOffsetDots, widthDots, drawingHeightDots - 1,
+        0, 0, widthDots, drawingHeightDots
+      );
+    } else {
+      canvasCtx.drawImage(
+        _(this)._fullPageBitmap,
+        0, 0, widthDots, drawingHeightDots + _(this)._currentScrollOffsetDots - 1,
+        0, -_(this)._currentScrollOffsetDots, widthDots, drawingHeightDots + _(this)._currentScrollOffsetDots
+      );
+    }
+  }
+
+  async _preparePageBitmap(abortSignal, dppx) {
+    // this is tricky: in Promise.all we'll have to convert _fontBlobPromises
+    // values to an array; this means we must be able to get _fontBlobPromises
+    // keys with integer indices, while object keys don't have guaranteed order.
+    // (We can alternatively use Maps though.)
+    let fontNames = Object.keys(_(this)._fontBlobPromises);
+    let fontDataURLArray = await Promise.all(
+      (await Promise.all(
+        fontNames.map(fontName => _(this)._fontBlobPromises[fontName])
+      )).map(blob => blob.asDataURL())
     );
+
+    if (abortSignal.aborted) { return; }
+
+    let styleSheet = await _(this)._pageStyleSheetPromise;
+
+    if (abortSignal.aborted) { return; }
+
+    let fontDataURLs = {};
+
+    fontNames.forEach((fontName, idx) => {
+      fontDataURLs[fontName] = fontDataURLArray[idx];
+    });
+
+    if (_(this)._lastWidthDots !== _(this)._viewport.width || 
+        _(this)._lastPageSourcePromise !== _(this)._pageSourcePromise){
+      _(this)._pageOfCurrentWidth = (await _(this)._pageSourcePromise).asRenderedPage(
+        styleSheet,
+        isSmallView(),
+        Object.assign({
+          dppx,
+          widthDots: _(this)._viewport.width,
+        }, !isSmallView() ? { paddingTop: $computedStyle('#sidebar', 'top', parseFloat) / window.REM_SCALE} : {}),
+        abortSignal,
+        fontDataURLs
+      );
+   
+      const resolvedBitmap = await _(this)._pageOfCurrentWidth.imagePromise;
+      if (abortSignal.aborted) { return; }
+
+      _(this)._fullPageBitmap = resolvedBitmap;
+      _(this)._lastWidthDots = _(this)._viewport.width;
+      _(this)._lastPageSourcePromise = _(this)._pageSourcePromise;
+    }
+
+    $('#main').style.setProperty(
+      '--ghost-container-height', `${_(this)._pageOfCurrentWidth.contentHeightDots / dppx}px`);
+  }
+
+  async _prepareRainEngineClient(dppx, raining) {
+    _(this)._rainEngineClient = new RainEngineClient(
+      _(this)._viewportPageCanvas,
+      _(this)._viewport,
+      raining,
+      dppx
+    );
+
+    await _(this)._rainEngineClient.constructsPromise;
   }
 
   _attachEvents() {
-    _(this)._viewport.addEventListener('wheel', _(this)._onWheelBound);
-    _(this)._viewport.addEventListener('touchstart', _(this)._onTouchstartBound);
-    _(this)._viewport.addEventListener('touchmove', _(this)._onTouchmoveBound);
-    _(this)._viewport.addEventListener('touchend', _(this)._onTouchendBound);
+    window.addEventListener('scroll', _(this)._onScrollBound);
     _(this)._viewport.addEventListener('mousemove', _(this)._onMousemoveBound);
     _(this)._viewport.addEventListener('click', _(this)._onClickBound);
   }
 
   _detachEvents() {
-    _(this)._viewport.removeEventListener('wheel', _(this)._onWheelBound);
-    _(this)._viewport.removeEventListener('touchstart', _(this)._onTouchstartBound);
-    _(this)._viewport.removeEventListener('touchmove', _(this)._onTouchmoveBound);
-    _(this)._viewport.removeEventListener('touchend', _(this)._onTouchendBound);
+    window.removeEventListener('scroll', _(this)._onScrollBound);
     _(this)._viewport.removeEventListener('mousemove', _(this)._onMousemoveBound);
     _(this)._viewport.removeEventListener('click', _(this)._onClickBound);
-  }
-
-  _scrollBy(delta, evt) {
-    let dppx = window.devicePixelRatio;
-    let viewportHeightDots = _(this)._viewport.height;
-
-    let newScrollOffsetDots = Math.max(
-      0,
-      Math.min(
-        _(this)._pageOfCurrentWidth.contentHeightDots - viewportHeightDots,
-        _(this)._currentScrollOffsetDots + delta * dppx
-      )
-    );
-
-    if (_(this)._currentScrollOffsetDots === newScrollOffsetDots) return;
-
-    _(this)._currentScrollOffsetDots = newScrollOffsetDots;
-    _(this)._currentScrollDepthRatio =
-      newScrollOffsetDots /
-      (_(this)._pageOfCurrentWidth.contentHeightDots - viewportHeightDots);
-    _(this)._renderViewportPageCanvas();
-    _(this)._rainEngineClient.renderer.updateTextures();
-    _(this)._onMousemove(evt);
-  }
-
-  _onWheel(evt) {
-    let viewportHeightDots = _(this)._viewport.height;
-    let deltaMultiplier = [
-      window.devicePixelRatio,
-      WHEEL_LINE_HEIGHT * window.devicePixelRatio,
-      viewportHeightDots
-    ][evt.deltaMode];
-
-    _(this)._scrollBy(evt.deltaY * deltaMultiplier, evt);
-
-    evt.preventDefault();
-  }
-
-  _onTouchstart(evt) {
-    // The primary purpose of this event handler is for scrolling, but it
-    // disables clicking too. So restoring clicking through an extra flag
-    // revolving the touch events.
-    let dppx = window.devicePixelRatio;
-
-    let pageXDots =
-      (evt.touches[0].clientX - _(this)._viewport.getBoundingClientRect().left) * dppx;
-    let pageYDots =
-      (evt.touches[0].clientY - _(this)._viewport.getBoundingClientRect().top) * dppx +
-      _(this)._currentScrollOffsetDots;
-
-    _(this)._isLastTouchOnActionable = _(this)._pageOfCurrentWidth.isActionable(pageXDots, pageYDots);
-
-    if (!_(this)._isLastTouchOnActionable) {
-      _(this)._lastTouchStartY = evt.touches[0].clientY;
-    }
-
-    evt.preventDefault();
-  }
-
-  _onTouchmove(evt) {
-    if (!_(this)._isLastTouchOnActionable) {
-      var currentY = evt.touches[0].clientY;
-      var delta = _(this)._lastTouchStartY - currentY;
-
-      _(this)._lastTouchStartY = currentY;
-
-      _(this)._scrollBy(delta, evt);
-    }
-
-    evt.preventDefault();
-  }
-
-  _onTouchend(evt) {
-    if (_(this)._isLastTouchOnActionable) {
-      let dppx = window.devicePixelRatio;
-
-      let pageXDots =
-        (evt.changedTouches[0].clientX - _(this)._viewport.getBoundingClientRect().left) * dppx;
-      let pageYDots =
-        (evt.changedTouches[0].clientY - _(this)._viewport.getBoundingClientRect().top) * dppx +
-        _(this)._currentScrollOffsetDots;
-
-      _(this)._triggerActionable(pageXDots, pageYDots);
-    }
-
-    _(this)._isLastTouchOnActionable = undefined;
-
-    evt.preventDefault();
   }
 
   _onMousemove(evt) {
@@ -393,6 +341,15 @@ class CanvasController {
     evt.preventDefault();
   }
 
+  _onScroll() {
+    let dppx = window.devicePixelRatio;
+
+    _(this)._currentScrollOffsetDots = document.documentElement.scrollTop * dppx;
+
+    _(this)._renderViewportPageCanvas();
+    _(this)._rainEngineClient.renderer.updateTextures();
+  }
+
   _triggerActionable(pageXDots, pageYDots) {
     _(this)._pageOfCurrentWidth.triggerActionable(
       pageXDots,
@@ -402,9 +359,47 @@ class CanvasController {
           case 'open-link':
             window.open(actionable.target);
             break;
+          case 'inner-nav':
+            let target = _(this)._pageOfCurrentWidth.getInnerNavTarget(actionable.target);
+            if (target) {
+              let margin = INNER_PAGE_SCROLL_TOP_MARGIN;
+              if (isSmallView()) {
+                margin += $computedStyle('html', '--small-view-header-height', parseFloat);
+              }
+              _(this)._smoothScrollTop(target.top / window.devicePixelRatio - margin);
+            }
+            break;
         }
       }
     );
+  }
+
+  // Safari (macOS / iOS) doesn't support scrollTo behavior: smooth, so impl'ing it ourselves
+  _smoothScrollTop(targetTop) {
+    cancelAnimationFrame(_(this)._scrollRequestAnimationFrameId);
+
+    let currentPass = 0;
+
+    const scrollPass = () => {
+      let currentScrollTop = document.documentElement.scrollTop;
+      let distance = targetTop - currentScrollTop;
+
+      let thisPassScrollDistance;
+      if (currentPass === INNER_PAGE_SCROLL_MAX_NUM_PASSES - 1) {
+        thisPassScrollDistance = distance;
+      } else {
+        thisPassScrollDistance = Math.min(distance, distance / INNER_PAGE_SCROLL_SPEED_ALPHA + INNER_PAGE_SCROLL_SPEED_DELTA);
+      }
+
+      document.documentElement.scrollTop = currentScrollTop + thisPassScrollDistance;
+
+      if (currentPass === INNER_PAGE_SCROLL_MAX_NUM_PASSES - 1 || thisPassScrollDistance === distance) {
+      } else {
+        requestAnimationFrame(scrollPass)
+      }
+    }
+
+    _(this)._scrollRequestAnimationFrameId = requestAnimationFrame(scrollPass);
   }
 }
 

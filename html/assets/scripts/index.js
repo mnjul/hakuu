@@ -5,7 +5,7 @@
 
 ;(function(exports){
 
-const INIT_PAGE_NAME = 'home';
+const INIT_PAGE_NAME = 'preface';
 
 let contentManager = new window.ContentManager();
 let canvasController = new window.CanvasController();

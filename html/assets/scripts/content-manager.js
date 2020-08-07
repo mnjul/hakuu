@@ -8,9 +8,11 @@
 const FONTS = Object.seal({
   Latin: 'latin.woff2',
   CJK: 'cjk.woff2',
+  LatinSans: 'latin-sans.woff2',
+  CJKSans: 'cjk-sans.woff2',
 });
 
-const PAGES = ['home', 'review', 'finale'];
+const PAGES = ['preface', 'portrayal', 'moment', 'postface', 'appendix'];
 
 let _;
 

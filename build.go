@@ -33,7 +33,7 @@ const DstDirName = "./output/"
 const PagesDirName = "pages/"
 const FontsDirName = "assets/fonts/"
 const BgmDirName = "assets/bgm/"
-const ReviewImagesDirName = "assets/images/review/"
+const AppendixImagesDirName = "assets/images/appendix/"
 const StylesDirName = "assets/styles/"
 const ScriptsDirName = "assets/scripts/"
 
@@ -56,7 +56,7 @@ func main() {
 	os.MkdirAll(path.Join(DstDirName, PagesDirName), 0755)
 	os.MkdirAll(path.Join(DstDirName, FontsDirName), 0755)
 	os.MkdirAll(path.Join(DstDirName, BgmDirName), 0755)
-	os.MkdirAll(path.Join(DstDirName, ReviewImagesDirName), 0755)
+	os.MkdirAll(path.Join(DstDirName, AppendixImagesDirName), 0755)
 	os.MkdirAll(path.Join(DstDirName, StylesDirName), 0755)
 	os.MkdirAll(path.Join(DstDirName, ScriptsDirName), 0755)
 
@@ -99,8 +99,8 @@ func main() {
 	fmt.Println("> Copying bgm...")
 	copyDir(BgmDirName)
 
-	fmt.Println("> Copying images for review...")
-	copyDir(ReviewImagesDirName)
+	fmt.Println("> Copying images for appendix...")
+	copyDir(AppendixImagesDirName)
 }
 
 func buildIndexJsAndHtml() {
@@ -306,9 +306,7 @@ func minifyIndexJs(dstPath string) {
 	// UglifyJS doesn't know AbortController yet
 	cmd := exec.Command(
 		"./node_modules/.bin/terser",
-		"-c",
-		"-m",
-		"--mangle-props", `regex=/^(?!\$.*$).*/,reserved=['aborted', 'signal', 'Latin', 'CJK', 'medium', 'low', 'loud', 'silent', 'dppx', 'widthDots', 'paddingTop', 'paddingHorizontal', 'paddingBottom', 'pMarginBottom', 'fontSize', 'lineHeight', 'raining', '_raining', '_loading', '_audioAvailable', '_volumeLevel', '_currentPage', 'home', 'review', 'finale', 'DEBUG', 'REM_SCALE']`,
+		"--config-file", "./terser_config.json",
 		"-o", fileName,
 		fileName)
 	runAndCheckCmd(cmd)
@@ -321,7 +319,7 @@ func removeMarkedJs(content string) string {
 }
 
 func ensureDebugFalse(content string) string {
-	markRegex := regexp.MustCompile(`(?m)^Object\.defineProperty\(exports,\s*'DEBUG',\s*{\s*value:\s*true\s*}\s*\);?$`)
+	markRegex := regexp.MustCompile(`(?m)^exports\.DEBUG\s*=\s*true;?$`)
 
-	return markRegex.ReplaceAllString(content, "Object.defineProperty(exports, 'DEBUG', {value: false});")
+	return markRegex.ReplaceAllString(content, "exports.DEBUG=false;")
 }

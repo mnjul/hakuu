@@ -53,11 +53,11 @@ class AudioManager {
     _(this)._bgmAvailablePromise = new Promise((resolve, reject) => {
       _(this)._bgmAudioElem.addEventListener('canplaythrough', () => {
         resolve();
-      });
+      }, { once: true });
 
       _(this)._bgmAudioElem.addEventListener('error', evt => {
         reject(evt.error);
-      });
+      }, { once: true });
 
       _(this)._bgmAudioElem.loop = true;
       _(this)._bgmAudioElem.src = BGM_FILENAME;

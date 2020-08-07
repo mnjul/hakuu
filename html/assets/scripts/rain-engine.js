@@ -4,6 +4,10 @@
 
 ;(function(exports){
 
+let cachedProgram;
+let cachedDropsGfx;
+let cachedClearDropletGfx;
+
 function createCanvas(width,height){
   let canvas=document.createElement("canvas");
   canvas.width=width;
@@ -170,7 +174,9 @@ GL.prototype={
     this.useProgram(this.program);
   },
   createProgram(vert,frag){
+    if (cachedProgram) return cachedProgram;
     let program=WebGL.createProgram(this.gl,vert,frag);
+    cachedProgram = program;
     return program;
   },
   useProgram(program){
@@ -542,40 +548,48 @@ Raindrops.prototype={
   },
 
   renderDropsGfx(){
-    let dropBuffer=createCanvas(dropSize,dropSize);
-    let dropBufferCtx=dropBuffer.getContext('2d');
-    this.dropsGfx=Array.apply(null,Array(255))
-      .map((cur,i)=>{
-        let drop=createCanvas(dropSize,dropSize);
-        let dropCtx=drop.getContext('2d'); // alpha: false on this breaks everything
+    if (cachedDropsGfx) {
+      this.dropsGfx = cachedDropsGfx;
+    } else {
+      let dropBuffer=createCanvas(dropSize,dropSize);
+      let dropBufferCtx=dropBuffer.getContext('2d');
+      this.dropsGfx=cachedDropsGfx=Array.apply(null,Array(255))
+        .map((cur,i)=>{
+          let drop=createCanvas(dropSize,dropSize);
+          let dropCtx=drop.getContext('2d'); // alpha: false on this breaks everything
+  
+          dropBufferCtx.clearRect(0,0,dropSize,dropSize);
+  
+          // color
+          dropBufferCtx.globalCompositeOperation="source-over";
+          dropBufferCtx.drawImage(this.dropColor,0,0,dropSize,dropSize);
+  
+          // blue overlay, for depth
+          dropBufferCtx.globalCompositeOperation="screen";
+          dropBufferCtx.fillStyle="rgba(0,0,"+i+",1)";
+          dropBufferCtx.fillRect(0,0,dropSize,dropSize);
+  
+          // alpha
+          dropCtx.globalCompositeOperation="source-over";
+          dropCtx.drawImage(this.dropAlpha,0,0,dropSize,dropSize);
+  
+          dropCtx.globalCompositeOperation="source-in";
+          dropCtx.drawImage(dropBuffer,0,0,dropSize,dropSize);
+          return drop;
+      });
+    }
 
-        dropBufferCtx.clearRect(0,0,dropSize,dropSize);
-
-        // color
-        dropBufferCtx.globalCompositeOperation="source-over";
-        dropBufferCtx.drawImage(this.dropColor,0,0,dropSize,dropSize);
-
-        // blue overlay, for depth
-        dropBufferCtx.globalCompositeOperation="screen";
-        dropBufferCtx.fillStyle="rgba(0,0,"+i+",1)";
-        dropBufferCtx.fillRect(0,0,dropSize,dropSize);
-
-        // alpha
-        dropCtx.globalCompositeOperation="source-over";
-        dropCtx.drawImage(this.dropAlpha,0,0,dropSize,dropSize);
-
-        dropCtx.globalCompositeOperation="source-in";
-        dropCtx.drawImage(dropBuffer,0,0,dropSize,dropSize);
-        return drop;
-    });
-
-    // create circle that will be used as a brush to remove droplets
-    this.clearDropletsGfx=createCanvas(128,128);
-    let clearDropletsCtx=this.clearDropletsGfx.getContext("2d", {alpha: false});
-    clearDropletsCtx.fillStyle="#000";
-    clearDropletsCtx.beginPath();
-    clearDropletsCtx.arc(64,64,64,0,Math.PI*2);
-    clearDropletsCtx.fill();
+    if (cachedClearDropletGfx) {
+      this.clearDropletsGfx = cachedClearDropletGfx;
+    } else {
+      // create circle that will be used as a brush to remove droplets
+      this.clearDropletsGfx=cachedClearDropletGfx=createCanvas(128,128);
+      let clearDropletsCtx=this.clearDropletsGfx.getContext("2d", {alpha: false});
+      clearDropletsCtx.fillStyle="#000";
+      clearDropletsCtx.beginPath();
+      clearDropletsCtx.arc(64,64,64,0,Math.PI*2);
+      clearDropletsCtx.fill();
+    }
   },
   drawDrop(ctx,drop){
     if(this.dropsGfx.length>0){

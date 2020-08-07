@@ -60,7 +60,7 @@ class SiteController {
       set(__currentPage) {
         $('#main-menu').dataset.currentPage = __currentPage;
         $('#small-view-header-page-title').textContent =
-          $(`#main-menu span[data-page="${__currentPage}"]`).textContent;
+          $(`#main-menu [data-page="${__currentPage}"]`).textContent;
       }
     });
   }
@@ -70,7 +70,10 @@ class SiteController {
     // getBoundingRect just at DOMContentLoaded
     document.addEventListener(
       'DOMContentLoaded',
-      () => requestAnimationFrame(_(this)._onReady.bind(this))
+      async () => {
+        await $frame();
+        _(this)._onReady();
+      }
     );
 
     window.addEventListener('resize', _(this)._onResize.bind(this));
@@ -98,10 +101,10 @@ class SiteController {
     });
   }
 
-  async _restart() {
+  async _restart(resetScroll) {
     _(this)._loading = true;
     _(this)._canvasController.destroy();
-    await _(this)._canvasController.start(_(this)._raining);
+    await _(this)._canvasController.start(_(this)._raining, resetScroll);
     _(this)._loading = false;
   }
 
@@ -118,7 +121,8 @@ class SiteController {
   }
 
   _onMainMenuClick(evt) {
-    if (!(evt.target instanceof HTMLSpanElement)){
+    if (!(evt.target instanceof HTMLSpanElement) &&
+        !(evt.target instanceof HTMLLIElement)){
       return;
     }
 
@@ -170,7 +174,7 @@ class SiteController {
         styleElem.textContent = `
           @font-face {
             font-family: 'MIH ${fontName.toUpperCase()}';
-            font-weight: ${getComputedStyle($('body')).getPropertyValue('font-weight')};
+            font-weight: ${$computedStyle('body', 'font-weight')};
             src: url('${url}') format('woff2');
           }
         `;
@@ -193,7 +197,7 @@ class SiteController {
     let pageSourcePromise = _(this)._contentManager.getPageSourcePromise(pageName);
 
     _(this)._canvasController.pageSourcePromise = pageSourcePromise;
-    _(this)._restart();
+    _(this)._restart(true);
 
     await pageSourcePromise;
     _(this)._currentPage = pageName;
