@@ -1,0 +1,26 @@
+{
+  "env": {
+    "browser": true,
+    "es2020": true
+  },
+  "extends": "esnext",
+  "rules": {
+    "prefer-const": ["error", { "ignoreReadBeforeAssign": true }],
+    "import/no-commonjs": "off",
+    "no-else-return": "off"
+  },
+  "ignorePatterns": [
+    "node_modules/**",
+    "output/**",
+    "html/dep/**",
+    "**/rain-engine.js"
+  ],
+  "globals": {
+    "$": "readonly",
+    "$$": "readonly",
+    "$e": "readonly",
+    "$frame": "readonly",
+    "$time": "readonly",
+    "$computedStyle": "readonly"
+  }
+}

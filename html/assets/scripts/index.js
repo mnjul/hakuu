@@ -3,26 +3,27 @@
 
 'use strict';
 
-;(function(exports){
+(function (exports) {
+  const INIT_PAGE_NAME = 'preface';
 
-const INIT_PAGE_NAME = 'preface';
-
-let contentManager = new window.ContentManager();
-let canvasController = new window.CanvasController();
-let audioManager = new window.AudioManager();
-let siteController = new window.SiteController(
-  INIT_PAGE_NAME, contentManager, canvasController, audioManager
-);
-
-siteController.init();
-
-if (window.DEBUG) {
-  exports.index = {
+  const contentManager = new window.ContentManager();
+  const canvasController = new window.CanvasController();
+  const audioManager = new window.AudioManager();
+  const siteController = new window.SiteController(
+    INIT_PAGE_NAME,
     contentManager,
     canvasController,
-    audioManager,
-    siteController
-  };
-}
+    audioManager
+  );
 
+  siteController.init();
+
+  if (window.DEBUG) {
+    exports.index = {
+      contentManager,
+      canvasController,
+      audioManager,
+      siteController,
+    };
+  }
 })(window);

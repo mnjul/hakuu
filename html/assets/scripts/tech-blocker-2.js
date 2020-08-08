@@ -5,21 +5,24 @@
 
 (async () => {
   if (window.AbortController) {
-    let a = {c: ''};
-    let {c: b} = a;
-    let d = [];
-    let e = [...d];
-    let f = [e].flat();
+    const a = { c: '' };
+    const { c: b } = a;
+    const d = [];
+    const e = [...d];
+    const f = [e].flat();
+    const g = f ?? [];
 
-    let canvas = document.createElement('canvas');
-    if (['webgl', 'experimental-webgl'].every(type => !canvas.getContext(type))) {
+    const canvas = document.createElement('canvas');
+    if (
+      ['webgl', 'experimental-webgl'].every((type) => !canvas.getContext(type))
+    ) {
       return;
     }
 
-    clearTimeout(window.esBlockerTimeout);  
-    Array.from(document.querySelectorAll('.tech-blocker')).forEach(elem => {
+    clearTimeout(window.esBlockerTimeout);
+    Array.from(document.querySelectorAll('.tech-blocker')).forEach((elem) => {
       elem.dataset.b = b;
-      elem.dataset.e = f;
+      elem.dataset.g = g;
       elem.remove();
     });
   }

@@ -37,6 +37,9 @@ const AppendixImagesDirName = "assets/images/appendix/"
 const StylesDirName = "assets/styles/"
 const ScriptsDirName = "assets/scripts/"
 
+var IndexHtmlStyleRegex = regexp.MustCompile(`\n\s*<link\s+href="dep/normalize\.css/normalize\.css"\s+rel="stylesheet"\s+type="text/css"\s+/>\s*\n`)
+var IndexHtmlScriptRegex = regexp.MustCompile(`[ \t]*<script\s+defer\s+src="([^"]+)"\s*></script\s*>\s*\n`)
+
 func main() {
 	var cmd *exec.Cmd
 
@@ -78,7 +81,8 @@ func main() {
 
 	buildPagesCss()
 
-	buildIndexJsAndHtml()
+	buildIndexJs()
+	buildIndexHtml()
 
 	fmt.Println("> Copying tech-blocker-1.js...")
 	copyFile(path.Join(ScriptsDirName, "tech-blocker-1.js"))
@@ -103,73 +107,17 @@ func main() {
 	copyDir(AppendixImagesDirName)
 }
 
-func buildIndexJsAndHtml() {
-	fmt.Println("> Reading index.html...")
+func buildIndexJs() {
+	fmt.Println("> Reading index.html for index.js building...")
 	srcIndexHtml := readFile("index.html")
 
 	dstIndexJs := ""
-	dstIndexHtml := ""
 
-	styleRegex := regexp.MustCompile(`^<link href="([^"]+)" rel="stylesheet" type="text/css" />$`)
-	scriptRegex := regexp.MustCompile(`^<script defer src="([^"]+)"></script>$`)
-
-	skipping := false
-	for _, line := range strings.Split(srcIndexHtml, "\n") {
-		trimmedLine := strings.TrimSpace(line)
-
-		if skipping {
-			goto done
-		}
-
-		if trimmedLine == "</head>" {
-			skipping = true
-			goto done
-		}
-
-		{
-			styleMatch := styleRegex.FindStringSubmatch(trimmedLine)
-
-			if styleMatch != nil {
-				fileName := styleMatch[1]
-
-				switch fileName {
-				case "dep/normalize.css/normalize.css":
-					fmt.Println("> Removed normalize.css line")
-					continue
-				case "assets/styles/index.css":
-				default:
-					panic("Unrecognized css line [" + fileName + "]")
-				}
-
-				goto done
-			}
-		}
-
-		{
-			scriptMatch := scriptRegex.FindStringSubmatch(trimmedLine)
-
-			if scriptMatch != nil {
-				fileName := scriptMatch[1]
-
-				fmt.Println("> Reading " + fileName + " into memory...")
-				dstIndexJs += readFile(fileName)
-
-				switch fileName {
-				case "assets/scripts/index.js":
-				default:
-					continue
-				}
-
-				goto done
-			}
-		}
-
-	done:
-		dstIndexHtml += line + "\n"
+	for _, match := range IndexHtmlScriptRegex.FindAllStringSubmatch(srcIndexHtml, -1) {
+		fileName := match[1]
+		fmt.Println("> Reading " + fileName + " into memory...")
+		dstIndexJs += readFile(fileName)
 	}
-
-	fmt.Println("> Writing index.html...")
-	writeFile("index.html", dstIndexHtml)
 
 	dstIndexJs = ensureDebugFalse(dstIndexJs)
 	dstIndexJs = removeMarkedJs(dstIndexJs)
@@ -179,6 +127,25 @@ func buildIndexJsAndHtml() {
 
 	fmt.Println("> Minifying index.js...")
 	minifyIndexJs("index.js")
+}
+
+func buildIndexHtml() {
+	fmt.Println("> Reading index.html for building...")
+	srcIndexHtml := readFile("index.html")
+	dstIndexHtml := srcIndexHtml
+
+	dstIndexHtml = IndexHtmlStyleRegex.ReplaceAllString(dstIndexHtml, "\n")
+
+	for _, match := range IndexHtmlScriptRegex.FindAllStringSubmatch(dstIndexHtml, -1) {
+		if match[1] == "assets/scripts/index.js" {
+			continue
+		}
+
+		dstIndexHtml = strings.Replace(dstIndexHtml, match[0], "", 1)
+	}
+
+	fmt.Println("> Writing index.html...")
+	writeFile("index.html", dstIndexHtml)
 }
 
 // clean-css moves the placeholder comments from:
@@ -319,7 +286,7 @@ func removeMarkedJs(content string) string {
 }
 
 func ensureDebugFalse(content string) string {
-	markRegex := regexp.MustCompile(`(?m)^exports\.DEBUG\s*=\s*true;?$`)
+	markRegex := regexp.MustCompile(`(?m)^\s*exports\.DEBUG\s*=\s*true;?$`)
 
 	return markRegex.ReplaceAllString(content, "exports.DEBUG=false;")
 }

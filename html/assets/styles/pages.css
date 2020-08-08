@@ -4,14 +4,14 @@
  */
 
 :root {
-  --dppx: /*!%DPPX%*/0;
-  --width: /*!%WIDTHDOTS%*/0px;
-  --padding-horizontal: /*!%PADDINGHORIZONTAL%*/0rem;
-  --padding-top: /*!%PADDINGTOP%*/0rem;
-  --padding-bottom: /*!%PADDINGBOTTOM%*/0rem;
-  --font-size: /*!%FONTSIZE%*/0rem;
-  --h2-font-size: /*!%H2FONTSIZE%*/0rem;
-  --line-height: /*!%LINEHEIGHT%*/0;
+  --dppx: /*!%DPPX%*/ 0;
+  --width: /*!%WIDTHDOTS%*/ 0px;
+  --padding-horizontal: /*!%PADDINGHORIZONTAL%*/ 0rem;
+  --padding-top: /*!%PADDINGTOP%*/ 0rem;
+  --padding-bottom: /*!%PADDINGBOTTOM%*/ 0rem;
+  --font-size: /*!%FONTSIZE%*/ 0rem;
+  --h2-font-size: /*!%H2FONTSIZE%*/ 0rem;
+  --line-height: /*!%LINEHEIGHT%*/ 0;
 }
 
 *,
@@ -21,7 +21,9 @@
 }
 
 svg {
-  font-size: calc(var(--dppx) * 100px); /* multiply by 100 to work around user-agent's minimum font sizes */
+  font-size: calc(
+    var(--dppx) * 100px
+  ); /* multiply by 100 to work around user-agent's minimum font sizes */
 }
 
 @font-face {
@@ -48,30 +50,31 @@ svg {
   src: url('/*!%CJKSANSFONT%*/0') format('woff2');
 }
 
-#svg-computer-body, #svg-computer-body * {
-   box-sizing: border-box;
+#svg-computer-body,
+#svg-computer-body * {
+  box-sizing: border-box;
 }
 
 #svg-computer-body {
-   margin: 0;
-   padding: 0;
-   background-color: #fafafa;
-   width: var(--width);
-   color: hsl(0, 0%, 30%);
+  margin: 0;
+  padding: 0;
+  background-color: #fafafa;
+  width: var(--width);
+  color: hsl(0, 0%, 30%);
 }
 
 #svg-main-container {
   --letter-spacing: 0.01rem;
 
-   width: var(--width);
-   font-family: 'MIH Latin', 'MIH CJK', serif;
-   font-weight: 200;
-   font-size: var(--font-size);
-   line-height: var(--line-height);
-   text-rendering: optimizeLegibility;
-   letter-spacing: var(--letter-spacing);
-   padding: var(--padding-top) var(--padding-horizontal) var(--padding-bottom);
-   font-synthesis: none;
+  width: var(--width);
+  font-family: 'MIH Latin', 'MIH CJK', serif;
+  font-weight: 200;
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+  text-rendering: optimizeLegibility;
+  letter-spacing: var(--letter-spacing);
+  padding: var(--padding-top) var(--padding-horizontal) var(--padding-bottom);
+  font-synthesis: none;
 }
 
 blockquote {
@@ -115,7 +118,7 @@ blockquote:not(:last-child) {
 
 .page-small blockquote.commentary p {
   margin-left: calc(2em + calc(var(--letter-spacing) * 2));
-  margin-right: calc(2em + calc(var(--letter-spacing) * 2)); 
+  margin-right: calc(2em + calc(var(--letter-spacing) * 2));
 }
 
 a {
@@ -145,7 +148,6 @@ blockquote a {
 
 .in-page-menu span {
   display: block;
-
 }
 
 .in-page-menu li + span {
@@ -193,7 +195,7 @@ h2 {
   display: grid;
   grid-template-columns: 2.16rem auto;
   grid-template-rows: auto auto;
-  grid-template-areas: 
+  grid-template-areas:
     'info image'
     '. content';
   column-gap: 0.2rem;
@@ -223,7 +225,8 @@ h2 {
   margin-right: -0.6em;
 }
 
-.appendix-version-date, .appendix-version-svcn {
+.appendix-version-date,
+.appendix-version-svcn {
   font-size: 0.15rem;
   line-height: 1.8;
 }
@@ -245,7 +248,7 @@ h2 {
 }
 
 .appendix-narrow .appendix-version {
-  grid-template-areas: 
+  grid-template-areas:
     'info image'
     'content content';
 }

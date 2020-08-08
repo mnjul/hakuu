@@ -7,10 +7,10 @@ package main
 
 import (
 	"io/ioutil"
-	"sort"
 	"path"
-	"unicode"
 	"regexp"
+	"sort"
+	"unicode"
 )
 
 type RuneSlice []rune
@@ -66,7 +66,7 @@ func parseHTML(filepath string, cjk_chars map[rune]bool, cjk_puncs map[rune]bool
 	}
 
 	content_without_quote := re.ReplaceAllLiteralString(string(content), "")
-	parse([]byte(content_without_quote), cjk_chars, cjk_puncs, latin_chars)	
+	parse([]byte(content_without_quote), cjk_chars, cjk_puncs, latin_chars)
 }
 
 func parseCSS(filepath string, cjk_chars map[rune]bool, cjk_puncs map[rune]bool, latin_chars map[rune]bool, cjk_sans_chars map[rune]bool, cjk_sans_puncs map[rune]bool, latin_sans_chars map[rune]bool) {
@@ -118,7 +118,7 @@ func isLatinFontChar(char rune) bool {
 
 func isCJKPunc(char rune) bool {
 	switch char {
-	case '–', '（','）','，','－','：','；','？','—','、','。','「','」','…','．':
+	case '–', '（', '）', '，', '－', '：', '；', '？', '—', '、', '。', '「', '」', '…', '．':
 		return true
 	}
 	return false

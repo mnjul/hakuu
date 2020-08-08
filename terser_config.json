@@ -35,7 +35,9 @@
         "portrayal",
         "moment",
         "postface",
-        "appendix"
+        "appendix",
+        "rasterizationDetectorOffsetX",
+        "rasterizationDetectorOffsetY"
       ]
     }
   }
