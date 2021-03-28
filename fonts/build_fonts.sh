@@ -1,7 +1,5 @@
 # This is part of Hakuu, a web site, and is licensed under AGPLv3.
-# Copyright (C) 2018 Min-Zhong Lu
-
-#!/bin/bash
+# Copyright (C) 2018-2021 Min-Zhong Lu
 
 # Remember to build docker image for the first time
 # docker build --tag fonttools ./fonttools.docker
@@ -13,7 +11,7 @@ docker cp ./fonts_source/SourceHanSerifTC-ExtraLight.otf fonttools-instance:/cjk
 docker cp ./fonts_source/CormorantInfant-Light.ttf fonttools-instance:/latin.ttf
 docker cp ./fonts_source/GenJyuuGothicL-Normal.ttf fonttools-instance:/cjk-sans.ttf
 docker cp ./fonts_source/SourceHanSansTC-Normal.otf fonttools-instance:/cjk-sans_punctuation.otf
-docker cp ./fonts_source/Roboto-Light.ttf fonttools-instance:/latin-sans.ttf
+docker cp ./fonts_source/Rubik-Light.ttf fonttools-instance:/latin-sans.ttf
 
 docker cp ./charsets/cjk.txt fonttools-instance:/cjk.txt
 docker cp ./charsets/cjk_punctuation.txt fonttools-instance:/cjk_punctuation.txt

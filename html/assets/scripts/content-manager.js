@@ -1,24 +1,29 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018-2020 Min-Zhong Lu
+// Copyright (C) 2018-2021 Min-Zhong Lu
 
 'use strict';
 
 (function (exports) {
-  const FONTS = Object.seal({
-    Latin: 'latin.woff2',
-    CJK: 'cjk.woff2',
-    LatinSans: 'latin-sans.woff2',
-    CJKSans: 'cjk-sans.woff2',
-  });
+  const FONTS = new Map([
+    ['Latin', 'latin.woff2'],
+    ['CJK', 'cjk.woff2'],
+    ['LatinSans', 'latin-sans.woff2'],
+    ['CJKSans', 'cjk-sans.woff2'],
+  ]);
 
-  const PAGES = ['preface', 'portrayal', 'moment', 'postface', 'appendix'];
+  const PAGES = [
+    'preface',
+    'portrayal',
+    'moment',
+    'prehension',
+    'postface',
+    'appendix',
+  ];
 
   let _;
 
   class ContentManager {
     constructor() {
-      this.fonts = FONTS;
-
       _(this)._pageSources = new Map(); // pagename => PageSource
 
       _(this)._pageFetchPromises = undefined; // pagename => Promise
@@ -33,10 +38,12 @@
         PAGES.map((name) => [name, fetch(`pages/${name}.xhtml`)])
       );
 
+      _(this)._prefetchPrehensionFigures();
+
       _(this)._styleSheetFetchPromise = fetch('assets/styles/pages.css');
 
       _(this)._fontFetchPromises = new Map(
-        Object.entries(FONTS).map(([name, filename]) => [
+        Array.from(FONTS.entries()).map(([name, filename]) => [
           name,
           fetch(`assets/fonts/${filename}`),
         ])
@@ -51,11 +58,21 @@
       return _(this)._pageSources.get(name);
     }
 
-    async _loadPage(name) {
-      return new window.PageSource(
-        await (await _(this)._pageFetchPromises.get(name)).text(),
-        name
-      );
+    _loadPage(name) {
+      return _(this)
+        ._pageFetchPromises.get(name)
+        .then((resp) => resp.text())
+        .then((source) => new window.PageSource(source, name));
+    }
+
+    async _prefetchPrehensionFigures() {
+      const source = (await this.getPageSourcePromise('prehension')).source;
+      const allMatches = Array.from(source.matchAll(/src="([^"]+)"/g));
+      const fetchMatch = (index) =>
+        〆.$cachedFetchImageToDataURL(allMatches[index][1]);
+      fetchMatch(0);
+      fetchMatch(allMatches.length - 1);
+      fetchMatch(1);
     }
 
     // Resolution of these fetch promises should be handled separately (as long
@@ -69,8 +86,8 @@
       );
     }
 
-    async getPageStyleSheetPromise() {
-      return await (await _(this)._styleSheetFetchPromise).text();
+    getPageStyleSheetPromise() {
+      return _(this)._styleSheetFetchPromise.then((resp) => resp.text());
     }
   }
 

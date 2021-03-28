@@ -1,15 +1,25 @@
 <!--
  This is part of Hakuu, a web site, and is licensed under AGPLv3.
- Copyright (C) 2018-2020 Min-Zhong Lu
+ Copyright (C) 2018-2021 Min-Zhong Lu
  -->
-<html xmlns="http://www.w3.org/1999/xhtml" id="svg-page-root">
+<html xmlns="http://www.w3.org/1999/xhtml" id="page-root">
   <head>
     <style>
       /*<![CDATA[*/ /*PAGES-CSS*/ /*]]>*/
     </style>
+    <style id="dynamic-page-css"></style>
+    <style>
+      /*<![CDATA[*/
+      .postface-declaration p {
+        line-height: 0.22rem;
+        margin-bottom: 1.5em;
+        font-size: 0.15rem;
+      }
+      /*]]>*/
+    </style>
   </head>
-  <body id="svg-computer-body" class="/*PAGES-CLASSES*/">
-    <div id="svg-main-container">
+  <body id="page-body">
+    <div id="page-main-container">
       <section>
         <article>
           <p class="rasterization-detector-target">
@@ -23,9 +33,7 @@
             隑胔乇侂衭葝枆犮乇岦餂茀冘沝。勼豗炃惊釓麡嗀綌妀犴朐抏泀邯厏塕亍刲彃綀。圌邯仴嬨腡噣屾一臹桹袟玠匜柀乇，鉡愝丌昅柤毼坴玊兀岠塺咢爿玡。亓鬯炅釴玵鱦廋裼朼伄郱体泧呫伳煄兀呠瞅媻。气赶杹烰昢虃塉亶巟冱侹忐朊炘杈痶兀咇餇楢。琀一砑梐菾誄乜僤瀄丱，軠乜拹酕絯幏屮漭仉尕。爿烚祅烳呰鑩椯葥癿邔狦皁泂岯犺蛸亍岣蜦輁。彘炆玎
             Lorem （ 褵蛵磭扥一 ）絭猗，窆玭屳玴兀釴玵鱦廋裼朼伄郱体泧呫伳。
           </p>
-          <p>
-            仉赶枔眭玸韇靷寙朳扦砓抈侞极吤剻乜怑熗鈰。
-          </p>
+          <p> 仉赶枔眭玸韇靷寙朳扦砓抈侞极吤剻乜怑熗鈰。 </p>
           <p>
             掜一洉掜喑趎屮跾噣厹，笻乜耇淗惢嗊屮滱丱帄。solum，愖矷妅輶葌濋邔一琫莏娕呯仡挍屮，楄湆兀怭苵寖帗氻屮杽嫟柭夬阼。惔一恌悿裗溿乇滮醑爿，捥兀牮婄跅剸屮漥丮庀。塍岪邔縥嫋錸伔一翗莐涑泭汃恌亍，稓菣屮芢迮慅佴仨兀妽蒺昳勼枟。
           </p>
@@ -37,32 +45,45 @@
               This website adapts
               <a
                 href="https://tympanus.net/codrops/2015/11/04/rain-water-effect-experiments/"
+                target="_blank"
                 >rain effect code</a
               >
-              by Lucas Bebber; is typeset in
-              <a href="https://source.typekit.com/source-han-serif/"
+              by Lucas Bebber and
+              <a
+                href="https://tympanus.net/codrops/2019/02/19/svg-filter-effects-creating-texture-with-feturbulence/"
+                target="_blank"
+                >SVG texture code</a
+              >
+              by Sara Soueidan; is typeset in
+              <a
+                href="https://source.typekit.com/source-han-serif/"
+                target="_blank"
                 >Source Han Serif</a
               >
               and
-              <a href="https://github.com/adobe-fonts/source-han-sans"
+              <a
+                href="https://github.com/adobe-fonts/source-han-sans"
+                target="_blank"
                 >Source Han Sans</a
               >
               by Adobe and Google,
               <a
                 href="https://www.behance.net/gallery/28579883/Cormorant-an-open-source-display-font-family"
+                target="_blank"
                 >Cormorant Infant</a
               >
               by Catharsis Fonts / Christian Thalmann,
-              <a href="http://jikasei.me/font/genjyuu/">GenJyuu Gothic</a> by
-              Jikasei Font Workshop, and
-              <a href="https://github.com/googlefonts/roboto">Roboto</a> by
-              Google; uses raining sound effect from Adobe; incorporates
-              <a href="https://necolas.github.io/normalize.css/"
-                >normalize.css</a
+              <a href="http://jikasei.me/font/genjyuu/" target="_blank"
+                >GenJyuu Gothic</a
               >
-              by Nicolas Gallagher; is engineered with fontttools, terser,
-              clean-css, eslint and prettier; and is realized through Adobe's
-              Experience Design and Microsoft's Visual Studio Code.
+              by Jikasei Font Workshop, and
+              <a href="https://github.com/googlefonts/rubik" target="_blank"
+                >Rubik</a
+              >
+              by Google; uses raining sound effect from Adobe; is engineered
+              with fontttools, woff2, terser, clean-css, eslint and prettier;
+              and is realized through Adobe’s Experience Design and Microsoft’s
+              Visual Studio Code.
             </p>
             <p>
               Some trademarks and copyrights are the property of their

@@ -1,15 +1,15 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018-2020 Min-Zhong Lu
+// Copyright (C) 2018-2021 Min-Zhong Lu
 
 'use strict';
 
 (function (exports) {
-  const VOL_LEVEL = Object.seal({
-    silent: 0,
-    low: 0.2,
-    medium: 0.6,
-    loud: 1,
-  });
+  const VOL_LEVEL = new Map([
+    ['silent', 0],
+    ['low', 0.2],
+    ['medium', 0.6],
+    ['loud', 1],
+  ]);
 
   const RAIN_FILENAME = 'assets/bgm/rain.wav';
   const BGM_FILENAME = 'assets/bgm/bgm.mp3';
@@ -27,6 +27,8 @@
       _(this)._bgmAudioElem = undefined;
       _(this)._rainBufferSource = undefined;
       _(this)._rainGain = undefined;
+      _(this)._volumeLavel = 0;
+      _(this)._rainMuted = false;
 
       _(this)._bgmAvailablePromise = undefined;
       _(this)._rainAvailablePromise = undefined;
@@ -69,7 +71,7 @@
       });
     }
 
-    async _setRainAvailablePromise() {
+    _setRainAvailablePromise() {
       _(this)._rainGain = _(this)._audioCtx.createGain();
       _(this)._rainGain.connect(_(this)._audioCtx.destination);
 
@@ -77,20 +79,23 @@
       _(this)._rainBufferSource.connect(_(this)._rainGain);
       _(this)._rainBufferSource.loop = true;
 
-      const arrayBuffer = await (await fetch(RAIN_FILENAME)).arrayBuffer();
-
-      _(this)._rainAvailablePromise = new Promise((resolve, reject) => {
-        _(this)._audioCtx.decodeAudioData(
-          arrayBuffer,
-          (audioBuffer) => {
-            _(this)._rainBufferSource.buffer = audioBuffer;
-            resolve();
-          },
-          (error) => {
-            reject(error);
-          }
+      _(this)._rainAvailablePromise = fetch(RAIN_FILENAME)
+        .then((resp) => resp.arrayBuffer())
+        .then(
+          (arrayBuffer) =>
+            new Promise((resolve, reject) => {
+              _(this)._audioCtx.decodeAudioData(
+                arrayBuffer,
+                (audioBuffer) => {
+                  _(this)._rainBufferSource.buffer = audioBuffer;
+                  resolve();
+                },
+                (error) => {
+                  reject(error);
+                }
+              );
+            })
         );
-      });
     }
 
     // We can't really stop an AudioBufferSourceNode, but since it's just playing
@@ -109,7 +114,8 @@
         console.error(e);
       }
 
-      _(this)._rainGain.gain.value = 0;
+      _(this)._volumeLavel = 0;
+      _(this)._setRainVolume();
     }
 
     playAndSetVolume(volumeLevelStr) {
@@ -121,10 +127,27 @@
         console.error(e);
       }
 
-      const volumeLevel = VOL_LEVEL[volumeLevelStr];
+      const volumeLevel = VOL_LEVEL.get(volumeLevelStr);
+      _(this)._volumeLavel = volumeLevel;
 
       _(this)._bgmAudioElem.volume = volumeLevel;
-      _(this)._rainGain.gain.value = volumeLevel * RAIN_VOL_MULTIPLIER;
+      _(this)._setRainVolume();
+    }
+
+    muteRain() {
+      _(this)._rainMuted = true;
+      _(this)._setRainVolume();
+    }
+
+    unmuteRain() {
+      _(this)._rainMuted = false;
+      _(this)._setRainVolume();
+    }
+
+    _setRainVolume() {
+      _(this)._rainGain.gain.value = _(this)._rainMuted
+        ? 0
+        : _(this)._volumeLavel * RAIN_VOL_MULTIPLIER;
     }
   }
 

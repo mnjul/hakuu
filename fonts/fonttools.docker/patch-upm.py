@@ -1,3 +1,6 @@
+# This is part of Hakuu, a web site, and is licensed under AGPLv3.
+# Copyright (C) 2018-2021 Min-Zhong Lu
+
 # This patches Source Han Sans's units-per-em to be consistent with Gen Jyuu Gothic.
 
 import re

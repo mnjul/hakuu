@@ -1,5 +1,5 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018 Min-Zhong Lu
+// Copyright (C) 2018-2021 Min-Zhong Lu
 
 // No DOM parser here yet.
 
@@ -45,6 +45,11 @@ func main() {
 		parseCSS(path.Join("../html/assets/styles/", fileInfo.Name()), cjk_chars, cjk_puncs, latin_chars, cjk_sans_chars, cjk_sans_puncs, latin_sans_chars)
 	}
 
+	// retain these for use in japanese content; pyftmerge will assign locl feature
+	// and we use html lang attribute to activate these variations
+	cjk_chars['、'] = true
+	cjk_chars['。'] = true
+
 	writeSubsetFile(latin_chars, "./charsets/latin.txt")
 	writeSubsetFile(cjk_chars, "./charsets/cjk.txt")
 	writeSubsetFile(cjk_puncs, "./charsets/cjk_punctuation.txt")
@@ -60,7 +65,7 @@ func parseHTML(filepath string, cjk_chars map[rune]bool, cjk_puncs map[rune]bool
 		panic("failed to open " + filepath)
 	}
 
-	re := regexp.MustCompile("(?s)<blockquote.+?</blockquote>")
+	re := regexp.MustCompile("(?s)<blockquote.+?</blockquote")
 	for _, quote_content := range re.FindAllString(string(content), -1) {
 		parse([]byte(quote_content), cjk_sans_chars, cjk_sans_puncs, latin_sans_chars)
 	}
@@ -110,7 +115,7 @@ func writeSubsetFile(chars map[rune]bool, filepath string) {
 
 func isLatinFontChar(char rune) bool {
 	switch char {
-	case '“', '”':
+	case '“', '”', '‘', '’':
 		return true
 	}
 	return false
@@ -118,7 +123,7 @@ func isLatinFontChar(char rune) bool {
 
 func isCJKPunc(char rune) bool {
 	switch char {
-	case '–', '（', '）', '，', '－', '：', '；', '？', '—', '、', '。', '「', '」', '…', '．':
+	case '–', '（', '）', '，', '－', '：', '；', '？', '！', '＆', '—', '＿', '～', '、', '。', '「', '」', '『', '』', '…', '．', '／':
 		return true
 	}
 	return false

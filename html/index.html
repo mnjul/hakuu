@@ -1,9 +1,9 @@
 <!--
  This is part of Hakuu, a web site, and is licensed under AGPLv3.
- Copyright (C) 2018-2020 Min-Zhong Lu
+ Copyright (C) 2018-2021 Min-Zhong Lu
  -->
 <!DOCTYPE html>
-<html>
+<html id="site-root">
   <head>
     <script
       defer
@@ -21,28 +21,27 @@
     <title>Hakuu Demo</title>
     <link rel="icon" sizes="192x192" href="favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link
-      href="dep/normalize.css/normalize.css"
-      rel="stylesheet"
-      type="text/css"
-    />
     <link href="assets/styles/index.css" rel="stylesheet" type="text/css" />
-    <script defer src="assets/scripts/common.js"></script>
+    <script defer src="assets/scripts/_env.js"></script>
+    <script defer src="assets/scripts/_js-utils.js"></script>
+    <script defer src="assets/scripts/_dom-ext.js"></script>
+    <script defer src="assets/scripts/_dom-utils.js"></script>
     <script defer src="assets/scripts/page.js"></script>
     <script defer src="assets/scripts/audio-manager.js"></script>
     <script defer src="assets/scripts/content-manager.js"></script>
     <script defer src="assets/scripts/rain-engine.js"></script>
+    <script defer src="assets/scripts/rain-engine-client.js"></script>
     <script defer src="assets/scripts/canvas-controller.js"></script>
     <script defer src="assets/scripts/site-controller.js"></script>
     <script defer src="assets/scripts/index.js"></script>
   </head>
-  <body>
+  <body id="site-body">
     <div id="tech-blocker-msg" class="tech-blocker"
       >This website requires latest versions of Mozilla Firefox, Google Chrome,
-      Microsoft Edge, Safari, or latest mobile operating systems.<br /><br />Technical
+      Microsoft Edge, or Safari, and latest versions of operating systems.<br /><br />Technical
       quesitons? Discuss at
       <a href="https://github.com/mnjul/hakuu/issues" target="_blank"
-        >GitHub repo's Issues</a
+        >GitHub repo’s Issues</a
       ></div
     >
     <aside id="small-view-header">
@@ -50,9 +49,15 @@
       <div class="loading-indicator">
         <span></span><span></span><span></span>
       </div>
+      <div
+        id="small-view-header-prehension-control"
+        class="prehension-control ui-actionable"
+      >
+        <span data-action="prev">前</span><span data-action="next">次</span>
+      </div>
     </aside>
     <aside id="sidebar">
-      <nav id="main-menu" class="sidebar-actionable">
+      <nav id="main-menu" class="ui-actionable">
         <section class="main-menu-section">
           <li data-page="preface">序</li>
         </section>
@@ -61,11 +66,14 @@
           <li data-page="moment">瞬</li>
         </section>
         <section class="main-menu-section">
+          <li data-page="prehension">所見</li>
+        </section>
+        <section class="main-menu-section">
           <li data-page="postface">跋</li>
           <li data-page="appendix">附錄</li>
         </section>
       </nav>
-      <section id="sidebar-controls" class="sidebar-actionable">
+      <section id="sidebar-controls" class="ui-actionable">
         <div id="rain-control">
           <span id="rain-control-stop">雨停</span
           ><span id="rain-control-start">下雨</span>
@@ -78,10 +86,22 @@
       <div class="loading-indicator">
         <span></span><span></span><span></span>
       </div>
+      <section
+        id="sidebar-prehension-control"
+        class="prehension-control ui-actionable"
+      >
+        <span data-action="prev">前</span><span data-action="next">次</span>
+      </section>
     </aside>
     <main id="main">
       <canvas id="viewport"></canvas>
+      <div id="page-holder"></div>
     </main>
-    <div id="small-view-sidebar-toggle"></div>
+    <div id="small-view-sidebar-toggle">
+      <svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+        <path id="small-view-sidebar-toggle-base" />
+        <path id="small-view-sidebar-toggle-fold" />
+      </svg>
+    </div>
   </body>
 </html>

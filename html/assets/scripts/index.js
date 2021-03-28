@@ -1,5 +1,5 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018-2020 Min-Zhong Lu
+// Copyright (C) 2018-2021 Min-Zhong Lu
 
 'use strict';
 
@@ -7,7 +7,7 @@
   const INIT_PAGE_NAME = 'preface';
 
   const contentManager = new window.ContentManager();
-  const canvasController = new window.CanvasController();
+  const canvasController = new window.CanvasController(window.RainEngineClient);
   const audioManager = new window.AudioManager();
   const siteController = new window.SiteController(
     INIT_PAGE_NAME,

@@ -1,5 +1,5 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018 Min-Zhong Lu
+// Copyright (C) 2018-2021 Min-Zhong Lu
 
 // This is a bespoke builder that generates a folder of files suitable for serving
 // on the internet, by copying/transforming the source html folder.
@@ -33,7 +33,7 @@ const DstDirName = "./output/"
 const PagesDirName = "pages/"
 const FontsDirName = "assets/fonts/"
 const BgmDirName = "assets/bgm/"
-const AppendixImagesDirName = "assets/images/appendix/"
+const ImagesDirName = "assets/images/"
 const StylesDirName = "assets/styles/"
 const ScriptsDirName = "assets/scripts/"
 
@@ -59,7 +59,7 @@ func main() {
 	os.MkdirAll(path.Join(DstDirName, PagesDirName), 0755)
 	os.MkdirAll(path.Join(DstDirName, FontsDirName), 0755)
 	os.MkdirAll(path.Join(DstDirName, BgmDirName), 0755)
-	os.MkdirAll(path.Join(DstDirName, AppendixImagesDirName), 0755)
+	os.MkdirAll(path.Join(DstDirName, ImagesDirName), 0755)
 	os.MkdirAll(path.Join(DstDirName, StylesDirName), 0755)
 	os.MkdirAll(path.Join(DstDirName, ScriptsDirName), 0755)
 
@@ -69,17 +69,17 @@ func main() {
 	fmt.Println("> Copying pages...")
 	copyDir(PagesDirName)
 
-	fmt.Println("> Concatenating normalize.css + index.css...")
-	srcNormalizeCss := readFile("dep/normalize.css/normalize.css")
-	srcIndexCss := readFile(path.Join(StylesDirName, "index.css"))
-
-	fmt.Println("> Writing index.css...")
-	writeFile(path.Join(StylesDirName, "index.css"), srcNormalizeCss+srcIndexCss)
+	fmt.Println("> Copying index.css...")
+	copyFile("assets/styles/index.css")
 
 	fmt.Println("> Minifying index.css...")
 	minifyCss("index.css")
 
-	buildPagesCss()
+	fmt.Println("> Copying pages.css...")
+	copyFile("assets/styles/pages.css")
+
+	fmt.Println("> Minifying pages.css...")
+	minifyCss("pages.css")
 
 	buildIndexJs()
 	buildIndexHtml()
@@ -103,8 +103,8 @@ func main() {
 	fmt.Println("> Copying bgm...")
 	copyDir(BgmDirName)
 
-	fmt.Println("> Copying images for appendix...")
-	copyDir(AppendixImagesDirName)
+	fmt.Println("> Copying images...")
+	copyDir(ImagesDirName)
 }
 
 func buildIndexJs() {
@@ -148,35 +148,6 @@ func buildIndexHtml() {
 	writeFile("index.html", dstIndexHtml)
 }
 
-// clean-css moves the placeholder comments from:
-// property: /*!PLACERHOLDER*/value;
-// to:
-// property:value;/*!PLACERHOLDER*/
-// So we need to reprocess a bit.
-func buildPagesCss() {
-	fmt.Println("> Minifying pages.css into memory...")
-	minifiedPagesCss := minifySrcCssIntoString("pages.css")
-	minifiedPagesCssRunes := []rune(minifiedPagesCss)
-
-	fmt.Println("> Postprocessing placeholders...")
-
-	rootDeclarationRegex := regexp.MustCompile(`:root\{[^}]+\}`)
-	variableDefinitionsRegex := regexp.MustCompile(`(--[a-zA-z0-9\-]+:)([^/]+)(/[^/]+/)`)
-
-	rootDeclarationIndexes := rootDeclarationRegex.FindStringSubmatchIndex(minifiedPagesCss)
-	rootDeclarationStartIndex := rootDeclarationIndexes[0]
-	rootDeclarationEndIndex := rootDeclarationIndexes[1]
-
-	variableDefinitions := string(minifiedPagesCssRunes[rootDeclarationStartIndex:rootDeclarationEndIndex])
-
-	postprocessedPagesCss := string(minifiedPagesCssRunes[:rootDeclarationStartIndex]) +
-		variableDefinitionsRegex.ReplaceAllString(variableDefinitions, "$1$3$2") +
-		string(minifiedPagesCssRunes[rootDeclarationEndIndex:])
-
-	fmt.Println("> Writing pages.css...")
-	writeFile(path.Join(StylesDirName, "pages.css"), postprocessedPagesCss)
-}
-
 func runAndCheckCmd(cmd *exec.Cmd) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -197,7 +168,6 @@ func runAndGetCmdOutput(cmd *exec.Cmd) string {
 	return string(output)
 }
 
-// No recursive copying for now
 func copyDir(pathAndName string) {
 	fileInfos, err := ioutil.ReadDir(path.Join(SrcDirName, pathAndName))
 
@@ -206,7 +176,13 @@ func copyDir(pathAndName string) {
 	}
 
 	for _, fileInfo := range fileInfos {
-		_copyFile(path.Join(SrcDirName, pathAndName, fileInfo.Name()), path.Join(DstDirName, pathAndName, fileInfo.Name()))
+		if fileInfo.IsDir() {
+			destPath := path.Join(pathAndName, fileInfo.Name())
+			os.MkdirAll(path.Join(DstDirName, destPath), 0755)
+			copyDir(destPath)
+		} else {
+			_copyFile(path.Join(SrcDirName, pathAndName, fileInfo.Name()), path.Join(DstDirName, pathAndName, fileInfo.Name()))
+		}
 	}
 }
 
@@ -252,19 +228,19 @@ func writeFile(dstPath string, content string) {
 
 func minifyCss(dstPath string) {
 	fileName := path.Join(DstDirName, StylesDirName, dstPath)
-	cmd := exec.Command("./node_modules/.bin/cleancss", "-o", fileName, fileName)
+	cmd := exec.Command("npx", "cleancss", "-o", fileName, fileName)
 	runAndCheckCmd(cmd)
 }
 
 func minifySrcCssIntoString(srcPath string) string {
 	fileName := path.Join(SrcDirName, StylesDirName, srcPath)
-	cmd := exec.Command("./node_modules/.bin/cleancss", fileName)
+	cmd := exec.Command("npx", "cleancss", fileName)
 	return runAndGetCmdOutput(cmd)
 }
 
 func minifyJs(dstPath string) {
 	fileName := path.Join(DstDirName, ScriptsDirName, dstPath)
-	cmd := exec.Command("./node_modules/.bin/terser", "-c", "-m", "-o", fileName, fileName)
+	cmd := exec.Command("npx", "terser", "-c", "-m", "-o", fileName, fileName)
 	runAndCheckCmd(cmd)
 }
 
@@ -272,7 +248,7 @@ func minifyIndexJs(dstPath string) {
 	fileName := path.Join(DstDirName, ScriptsDirName, dstPath)
 	// UglifyJS doesn't know AbortController yet
 	cmd := exec.Command(
-		"./node_modules/.bin/terser",
+		"npx", "terser",
 		"--config-file", "./terser_config.json",
 		"-o", fileName,
 		fileName)

@@ -1,248 +1,651 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018-2020 Min-Zhong Lu
+// Copyright (C) 2018-2021 Min-Zhong Lu
 
 'use strict';
 
 (function (exports) {
-  const RASTERIZE_DETECT_PARAGRAPH_INDENT = 30;
-
   let Page;
   let PageRasterizationDetector;
+
+  const PREFETCH_ADJACENT_OFFSET = 2;
+
+  // this should ideally be one em calculated when computing sizing
+  // this has to be large enough to account for safari's random vertical offsetting
+  // but small enough to not reach beyond what we should check
+  const RASTERIZE_DETECT_SIZE = 20;
+  const RASTERIZE_DETECT_OFFSET = RASTERIZE_DETECT_SIZE / 2;
 
   (function () {
     let _;
 
-    function normalizeDOMRect(rect, factor) {
-      return {
-        x: rect.x / factor,
-        y: rect.y / factor,
-        width: rect.width / factor,
-        height: rect.height / factor,
-        top: rect.top / factor,
-        right: rect.right / factor,
-        bottom: rect.bottom / factor,
-        left: rect.left / factor,
-      };
-    }
+    const PAGE_CLASSES_SETTER = new Map([
+      [
+        'appendix',
+        (bodyElem, { width }) => {
+          bodyElem.classList.toggle('appendix-narrow', width <= 840);
+
+          return [];
+        },
+      ],
+    ]);
 
     Page = class {
-      constructor(pageSource, { dppx, widthDots }, abortSignal) {
-        _(this)._doc = undefined;
+      constructor(
+        name,
+        pageSource,
+        { dppx, widthDots, heightDots },
+        abortSignal,
+        onLoadingState
+      ) {
+        _(this)._name = name;
+        _(this)._doc = new DOMParser().parseFromString(
+          pageSource,
+          'image/svg+xml'
+        ).documentElement;
+        _(this)._isFlatPage =
+          _(this)._doc.$('html').dataset.isFlatPage !== 'false';
+
         _(this)._dppx = dppx;
         _(this)._contentWidthDots = widthDots;
-        _(this)._contentHeightDots = undefined;
-        _(this)._rasterizationDetector = new PageRasterizationDetector(dppx);
-        _(this)._actionables = undefined;
-        _(this)._innerNavTargets = undefined;
-        _(this)._image = undefined;
+        _(this)._contentHeightDots = _(this)._isFlatPage
+          ? undefined
+          : heightDots;
 
-        this.imagePromise = async () => {
-          _(this)._doc = new DOMParser().parseFromString(
-            pageSource,
-            'image/svg+xml'
+        _(this)._onLoadingState = onLoadingState;
+
+        _(this)._rasterizationDetector = new PageRasterizationDetector(dppx);
+        _(this)._image = undefined;
+        this.actualImagesGenerator = undefined;
+        _(this)._xmlSerializer = new XMLSerializer();
+
+        _(this)._rasterizationRequests = [];
+
+        _(this)._requestInitialRasterization();
+        _(this)._startRasterizationLoop(abortSignal);
+
+        if (_(this)._isFlatPage) {
+          _(this)._setContentImagesToInlineBlank(false);
+          _(this)._fetchContentImagesInBackgorund();
+
+          _(this)._handleImageLoads(abortSignal);
+        } else {
+          _(this)._setContentImagesToInlineBlank(true);
+
+          _(this)._activeFigureIndex = 0;
+          _(this)._figures = Array.from(_(this)._doc.$$('figure'));
+          Array.from(_(this)._doc.$$('figure')).forEach((elem) =>
+            elem.remove()
           );
 
-          await _(this)._fetchImages();
+          _(this)._fetchAdjacentImagesInBackground(_(this)._activeFigureIndex);
 
-          if (abortSignal.aborted) {
-            return;
-          }
+          _(this)._switchToFigure(_(this)._activeFigureIndex);
+        }
 
-          await _(this)._computeSVGRendering();
+        const computer = $('#page-holder');
+        computer.empty();
+        computer.appendChild(document.adoptNode(_(this)._doc));
 
-          if (abortSignal.aborted) {
-            return;
-          }
+        _(this)._rasterizationDetector.setSecondaryBGColor(
+          〆.$computedStyle('html', '--empty-image-background')
+        );
 
-          await _(this)._produceImage();
+        _(this)._doc.style.fontSize = `${_(this)._dppx * 〆.$REM_SCALE}px`;
 
-          return _(this)._image;
-        };
+        $('#page-body').classList.add(_(this)._name);
+
+        _(this)._rasterizers = new Map([
+          [
+            'initial',
+            {
+              rasterizer: _(this)._rasterizeOnInitial.bind(_(this)),
+              getRasterizerArgs: () => [],
+              detector: _(this)._rasterizationDetector.detectText,
+              getDetectorArgs: () => [],
+            },
+          ],
+          [
+            'resize-w',
+            {
+              rasterizer: _(this)._rasterizeOnWidthResize.bind(_(this)),
+              getRasterizerArgs: ({ widthDots, dppx }) => [widthDots, dppx],
+              detector: _(this)._rasterizationDetector.detectText,
+              getDetectorArgs: () => [],
+            },
+          ],
+          [
+            'resize-h',
+            {
+              rasterizer: _(this)._rasterizeOnHeightResize.bind(_(this)),
+              getRasterizerArgs: ({ heightDots, dppx }) => [heightDots, dppx],
+              detector: _(this)._rasterizationDetector.detectText,
+              getDetectorArgs: () => [],
+            },
+          ],
+          [
+            'deactivate-figure',
+            {
+              rasterizer: _(this)._rasterizeWhileDeactivatingFigure.bind(
+                _(this)
+              ),
+              getRasterizerArgs: () => [],
+              detector: _(this)._rasterizationDetector.detectImageToBeBlank,
+              getDetectorArgs: () => [0],
+            },
+          ],
+          [
+            'activate-figure',
+            {
+              rasterizer: _(this)._rasterizeOnActiveFigure.bind(_(this)),
+              getRasterizerArgs: () => [],
+              detector: _(this)._rasterizationDetector.detectImage,
+              getDetectorArgs: () => [0],
+            },
+          ],
+          [
+            'image-loaded',
+            {
+              rasterizer: _(this)._rasterizeOnImageLoaded.bind(_(this)),
+              getRasterizerArgs: ({ imgIndex, imgURL }) => [imgIndex, imgURL],
+              detector: _(this)._rasterizationDetector.detectImage,
+              getDetectorArgs: ({ imgIndex }) => [imgIndex],
+            },
+          ],
+        ]);
       }
 
       get contentHeightDots() {
         return _(this)._contentHeightDots;
       }
 
-      isActionable(x, y) {
-        return _(this)._getActionable(x, y) !== undefined;
+      addEventListener(...args) {
+        _(this)._doc.addEventListener(...args);
       }
 
-      triggerActionable(x, y, callback) {
-        const actionable = _(this)._getActionable(x, y);
-
-        if (actionable) {
-          callback(Object.seal(actionable));
-        }
+      _fetchContentImagesInBackgorund() {
+        const imgElems = _(this)._doc.$$('img');
+        imgElems.forEach((elem) =>
+          〆.$cachedFetchImageToDataURL(elem.dataset.originalSrc)
+        );
       }
 
-      async _fetchImages() {
-        const imgElems = Array.from(_(this)._doc.querySelectorAll('img'));
-        let responses = await Promise.all(
-          imgElems.map((elem) => fetch(new Request(elem.getAttribute('src'))))
-        );
-
-        responses = await Promise.all(
-          responses.map((r) => r.blob().then((blob) => blob.asDataURL()))
-        );
-
-        imgElems.forEach((elem, idx) => {
-          const imgBase64 = responses[idx];
-          elem.setAttribute('src', imgBase64);
+      _setContentImagesToInlineBlank(dimensionless) {
+        const imgElems = _(this)._doc.$$('img');
+        imgElems.forEach((elem) => {
+          elem.dataset.originalSrc = elem.src;
+          elem.src = 〆.$generateBlankSVGInDataURI(
+            dimensionless ? 1 : elem.dataset.width,
+            dimensionless ? 1 : elem.dataset.height
+          );
         });
       }
 
-      async _computeSVGRendering() {
-        const dppx = _(this)._dppx;
-        $('html').style.fontSize = `${dppx * window.REM_SCALE}px`;
+      switchView(direction) {
+        if (_(this)._isFlatPage) return;
 
-        const doc = document.importNode(_(this)._doc.documentElement, true);
-        const container = $e('div');
-        container.id = 'svg-computer';
-        container.appendChild(doc);
-        $('body').appendChild(container);
+        if (direction === 'next') {
+          _(this)._switchToFigure(
+            (_(this)._activeIndex + 1) % _(this)._figures.length
+          );
+        } else if (direction === 'prev') {
+          _(this)._switchToFigure(
+            (_(this)._activeIndex - 1 + _(this)._figures.length) %
+              _(this)._figures.length
+          );
+        }
+      }
 
-        await Promise.all(
-          Array.from(doc.$$('img')).map(
+      _fetchAdjacentImagesInBackground(index) {
+        const fetchIndex = (idx) => {
+          const url = _(this)._figures[idx].$('img').dataset.originalSrc;
+          if (url && !url.startsWith('data')) {
+            〆.$cachedFetchImageToDataURL(url);
+          }
+        };
+
+        fetchIndex(index);
+
+        for (
+          let i = index - PREFETCH_ADJACENT_OFFSET;
+          i <= index + PREFETCH_ADJACENT_OFFSET;
+          i++
+        ) {
+          if (i === index) continue;
+
+          const indexInDOM =
+            (i + _(this)._figures.length) % _(this)._figures.length;
+
+          fetchIndex(indexInDOM);
+        }
+      }
+
+      _switchToFigure(index) {
+        const container = _(this)._doc.$('#page-main-container');
+        container.empty();
+        container.appendChild(_(this)._figures[index]);
+        _(this)._activeIndex = index;
+
+        _(this)._fetchAdjacentImagesInBackground(index);
+
+        _(this)._requestSwitchFigureRasterization();
+      }
+
+      // Only used for blank inlines for sizing calculation.
+      _waitForAllImagesLoaded() {
+        return Promise.all(
+          Array.from(_(this)._doc.$$('img')).map(
             (elem) =>
               new Promise((resolve, reject) => {
+                if (elem.complete) resolve();
                 elem.addEventListener('load', resolve, { once: true });
                 elem.addEventListener(
                   'error',
-                  reject.bind(`Image ${elem.src} fails to load`),
+                  reject.bind(null, `Image ${elem.src} fails to load`),
                   { once: true }
                 );
               })
           )
         );
-
-        _(this)._rasterizationDetector.setBGColor(
-          $computedStyle('#svg-computer-body', 'background-color')
-        );
-
-        // It appears that for android, one requestAnimationFrame call is not
-        // enough, and we need two separate return-to-event-queue constructs.
-        await $time(1);
-        await $frame();
-
-        const dppxFactor = await window.svgForeignObjectDppxFactor();
-
-        _(this)._contentHeightDots = Math.ceil(
-          normalizeDOMRect(
-            doc.$('#svg-main-container').getBoundingClientRect(),
-            dppxFactor
-          ).height
-        );
-
-        _(this)._actionables = [
-          ...Array.from(doc.$$('[data-action]')).map((elem) => ({
-            action: elem.dataset.action,
-            target: elem.dataset.target,
-            rects: Array.from(elem.getClientRects()).map((rect) =>
-              normalizeDOMRect(rect, dppxFactor)
-            ),
-          })),
-          ...Array.from(doc.$$('a')).map((elem) => ({
-            action: 'open-link',
-            target: elem.href,
-            rects: Array.from(elem.getClientRects()).map((rect) =>
-              normalizeDOMRect(rect, dppxFactor)
-            ),
-          })),
-        ];
-
-        _(this)._innerNavTargets = [
-          ...Array.from(doc.$$('[data-inner-nav-target]')).map((elem) => ({
-            name: elem.dataset.innerNavTarget,
-            top: normalizeDOMRect(elem.getBoundingClientRect(), dppxFactor).top,
-          })),
-        ];
-
-        _(this)._rasterizationDetector.setTargetPoints(
-          [
-            ...Array.from(doc.$$('.rasterization-detector-target')),
-            ...Array.from(doc.$$('.blockquote-detector-target')),
-            ...Array.from(doc.$$('img')),
-          ].map((elem) => {
-            const rect = normalizeDOMRect(
-              elem.getBoundingClientRect(),
-              dppxFactor
-            );
-            return {
-              x:
-                (elem.tagName.toLowerCase() === 'p'
-                  ? rect.left +
-                    RASTERIZE_DETECT_PARAGRAPH_INDENT * _(this)._dppx
-                  : rect.left) +
-                parseFloat(elem.dataset.rasterizationDetectorOffsetX ?? '0') *
-                  _(this)._dppx,
-              y:
-                rect.top +
-                parseFloat(elem.dataset.rasterizationDetectorOffsetY ?? '0') *
-                  _(this)._dppx,
-            };
-          })
-        );
-
-        container.remove();
-        $('html').style.removeProperty('font-size');
       }
 
-      async _produceImage() {
-        _(this)._doc.documentElement.setAttribute(
-          'width',
-          _(this)._contentWidthDots
+      _setRasterizationParameters() {
+        const bodyElem = $('#page-body');
+
+        const smallPageViewPaddingTop =
+          (〆.$computedStyle(
+            'html',
+            '--small-view-top-content-padding',
+            parseFloat
+          ) +
+            〆.$computedStyle(
+              'html',
+              '--small-view-header-height',
+              parseFloat
+            )) /
+          〆.$REM_SCALE;
+
+        const smallPageViewPaddingHorizontal =
+          〆.$computedStyle(
+            'html',
+            '--small-view-content-horizontal-padding',
+            parseFloat
+          ) / 〆.$REM_SCALE;
+
+        const regularPageViewPaddingTop =
+          〆.$computedStyle('#sidebar', '--regular-view-top', parseFloat) /
+          〆.$REM_SCALE;
+
+        const regularPageViewPaddingHorizontal =
+          〆.$computedStyle('html', '--page-horizontal-padding', parseFloat) /
+          〆.$REM_SCALE;
+
+        const articleFigcaptionFontSize =
+          〆.$computedStyle(
+            'html',
+            '--sidebar-controls-and-artical-figcaption-font-size',
+            parseFloat
+          ) / 〆.$REM_SCALE;
+
+        const textColor = 〆.$computedStyle('html', '--text-color');
+        const secondaryTextColor = 〆.$computedStyle(
+          'html',
+          '--secondary-text-color'
         );
-        _(this)._doc.documentElement.setAttribute(
-          'height',
-          _(this)._contentHeightDots
-        );
 
-        const serializer = new XMLSerializer();
-        let img = new Image();
+        const dynamicStyleSheet = `
+          #page-body.page-small {
+            --padding-top: ${smallPageViewPaddingTop}rem;
+            --padding-horizontal: ${smallPageViewPaddingHorizontal}rem;
+          }
 
-        let url =
-          'data:image/svg+xml;charset=utf-8,' +
-          encodeURIComponent(serializer.serializeToString(_(this)._doc));
+          #page-body {
+            --dppx: ${_(this)._dppx};
+            --width: ${
+              _(this)._contentWidthDots / 〆.$REM_SCALE / _(this)._dppx
+            }rem;
+            --height: ${
+              _(this)._contentHeightDots
+                ? `${
+                    _(this)._contentHeightDots / 〆.$REM_SCALE / _(this)._dppx
+                  }rem`
+                : 'auto'
+            };
+            --padding-top: ${regularPageViewPaddingTop}rem;
+            --padding-horizontal: ${regularPageViewPaddingHorizontal}rem;
+            --article-figcaption-font-size: ${articleFigcaptionFontSize}rem;            
+            --text-color: ${textColor};
+            --secondary-text-color: ${secondaryTextColor};
+          }
+        `;
 
-        _(this)._image = await new Promise((resolve, reject) => {
-          img.src = url;
+        bodyElem.classList.toggle('page-small', 〆.$isSmallView());
 
-          // being pedantic -- the img/string is huge so better not leak
-          const errorHandler = (e) => {
-            // eslint-disable-next-line no-use-before-define
-            img.removeEventListener('load', loadHandler);
-            reject(e);
-            img = url = null;
-          };
+        _(this)._doc.$('#dynamic-page-css').firstChild?.remove();
+        _(this)
+          ._doc.$('#dynamic-page-css')
+          .appendChild(
+            bodyElem.ownerDocument.createTextNode(dynamicStyleSheet)
+          );
 
-          const loadHandler = async () => {
-            img.removeEventListener('error', errorHandler);
-            await _(this)._rasterizationDetector.detect(img);
-            resolve(await window.convertToImageBitmapIfPossible(img));
-            img = url = null;
-          };
-
-          img.addEventListener('error', errorHandler, { once: true });
-          img.addEventListener('load', loadHandler, { once: true });
+        // eslint-disable-next-line no-empty-function
+        (PAGE_CLASSES_SETTER.get(_(this)._name) ?? function () {})(bodyElem, {
+          width: _(this)._contentWidthDots / _(this)._dppx,
         });
       }
 
-      _getActionable(x, y) {
-        return _(this)._actionables.find((actionable) =>
-          actionable.rects.some(
-            (rect) =>
-              x >= rect.left &&
-              x <= rect.right &&
-              y >= rect.top &&
-              y <= rect.bottom
-          )
-        );
+      async _computeSizingForSVGRendering(abortSignal) {
+        $('html').style.fontSize = `${_(this)._dppx * 〆.$REM_SCALE}px`;
+
+        try {
+          // It appears that for android, one requestAnimationFrame call is not
+          // enough, and we need two separate return-to-event-queue constructs.
+          await 〆.$time(1);
+
+          if (abortSignal.aborted) return;
+
+          await 〆.$frame();
+
+          if (abortSignal.aborted) return;
+
+          if (_(this)._isFlatPage) {
+            _(this)._contentHeightDots = Math.ceil(
+              〆.$normalizeDOMRect(_(this)._doc.$('#page-main-container'))
+                .height
+            );
+          }
+
+          _(this)._rasterizationDetector.setTextTargetPoints(
+            _(this)._getTargetPointsFromSelectors(
+              _(this)._doc,
+              _(this)._isFlatPage
+                ? [
+                    '.rasterization-detector-target',
+                    '.blockquote-detector-target',
+                  ]
+                : ['p:first-of-type'],
+              _(this)._isFlatPage
+                ? 'left'
+                : 〆.$isSmallView()
+                ? 'left'
+                : 'right'
+            )
+          );
+
+          _(this)._rasterizationDetector.setImageTargetPoints(
+            _(this)._getTargetPointsFromSelectors(_(this)._doc, ['img'])
+          );
+        } finally {
+          $('html').style.removeProperty('font-size');
+        }
       }
 
-      getInnerNavTarget(name) {
-        return _(this)._innerNavTargets.find(
-          ({ name: tgtName }) => tgtName === name
+      async _handleImageLoads(abortSignal) {
+        if (!_(this)._isFlatPage)
+          throw new Error('Non-flat page does not streamed img loading');
+
+        const imgElems = Array.from(_(this)._doc.$$('img'));
+
+        let fetchPromises = imgElems.map((elem, idx) => [
+          idx,
+          〆
+            .$cachedFetchImageToDataURL(elem.dataset.originalSrc)
+            .then((dataURL) => [idx, dataURL]),
+        ]);
+
+        while (fetchPromises.length > 0) {
+          const [imgElemIdx, dataURL] = await Promise.race(
+            fetchPromises.map(([, promise]) => promise)
+          );
+          if (abortSignal.aborted) return;
+
+          fetchPromises = fetchPromises.filter(
+            ([idxInDoc]) => idxInDoc !== imgElemIdx
+          );
+
+          _(this)._requestImageLoadedRasterization(imgElemIdx, dataURL);
+        }
+      }
+
+      _requestInitialRasterization() {
+        _(this)._rasterizationRequests.push({ type: 'initial' });
+      }
+
+      _requestSwitchFigureRasterization() {
+        _(this)._rasterizationRequests = _(this)._rasterizationRequests.filter(
+          ({ type }) => type !== 'activate-figure'
+        );
+        _(this)._rasterizationRequests = _(this)._rasterizationRequests.filter(
+          ({ type }) => type !== 'deactivate-figure'
+        );
+        _(this)._rasterizationRequests.push({ type: 'deactivate-figure' });
+        _(this)._rasterizationRequests.push({ type: 'activate-figure' });
+      }
+
+      requestResizeWRasterization(widthDots, dppx) {
+        _(this)._rasterizationRequests = _(this)._rasterizationRequests.filter(
+          ({ type }) => type !== 'resize-w'
+        );
+        _(this)._rasterizationRequests.push({
+          type: 'resize-w',
+          widthDots,
+          dppx,
+        });
+      }
+
+      requestResizeHRasterization(heightDots, dppx) {
+        _(this)._rasterizationRequests = _(this)._rasterizationRequests.filter(
+          ({ type }) => type !== 'resize-h'
+        );
+        _(this)._rasterizationRequests.push({
+          type: 'resize-h',
+          heightDots,
+          dppx,
+        });
+      }
+
+      _requestImageLoadedRasterization(imgIndex, imgURL) {
+        _(this)._rasterizationRequests.push({
+          type: 'image-loaded',
+          imgIndex,
+          imgURL,
+        });
+      }
+
+      _startRasterizationLoop(abortSignal) {
+        this.actualImagesGenerator = async function* () {
+          while (true) {
+            if (abortSignal.aborted) return;
+
+            await 〆.$frame();
+
+            try {
+              if (abortSignal.aborted) return;
+
+              if (_(this)._rasterizationRequests.length === 0) {
+                _(this)._onLoadingState(false);
+                continue;
+              } else {
+                _(this)._onLoadingState(true);
+              }
+
+              const request = _(this)._rasterizationRequests.shift();
+
+              const {
+                rasterizer,
+                getRasterizerArgs,
+                detector,
+                getDetectorArgs,
+              } = _(this)._rasterizers.get(request.type);
+              const detectorArgs = getDetectorArgs(request);
+
+              await rasterizer(abortSignal, ...getRasterizerArgs(request));
+
+              if (abortSignal.aborted) return;
+              yield _(this)._image;
+              if (abortSignal.aborted) return;
+
+              if (!(await detector(_(this)._image, ...detectorArgs))) {
+                _(this)._rasterizationRequests.unshift(request);
+              } else {
+                if (abortSignal.aborted) return;
+                yield _(this)._image;
+              }
+
+              if (abortSignal.aborted) return;
+            } catch (e) {
+              console.error(e);
+              continue;
+            }
+          }
+        }.bind(this);
+      }
+
+      async _rasterizeOnInitial(abortSignal) {
+        _(this)._setRasterizationParameters();
+
+        if (_(this)._isFlatPage) {
+          await _(this)._waitForAllImagesLoaded(abortSignal);
+          if (abortSignal.aborted) return;
+        }
+
+        await _(this)._computeSizingForSVGRendering(abortSignal);
+        if (abortSignal.aborted) return;
+
+        _(this)._doc.setAttribute('width', _(this)._contentWidthDots);
+
+        _(this)._doc.setAttribute('height', _(this)._contentHeightDots);
+
+        _(this)._image = await _(this)._rasterizeDoc();
+      }
+
+      async _rasterizeOnWidthResize(abortSignal, widthDots, dppx) {
+        _(this)._contentWidthDots = widthDots;
+        _(this)._dppx = dppx;
+
+        _(this)._setRasterizationParameters();
+        await _(this)._computeSizingForSVGRendering(abortSignal);
+        if (abortSignal.aborted) return;
+
+        _(this)._doc.setAttribute('width', _(this)._contentWidthDots);
+
+        if (_(this)._isFlatPage) {
+          _(this)._doc.setAttribute('height', _(this)._contentHeightDots);
+        }
+
+        _(this)._image = await _(this)._rasterizeDoc();
+      }
+
+      async _rasterizeOnHeightResize(abortSignal, heightDots, dppx) {
+        if (_(this)._isFlatPage) return;
+
+        _(this)._contentHeightDots = heightDots;
+        _(this)._dppx = dppx;
+
+        _(this)._setRasterizationParameters();
+        await _(this)._computeSizingForSVGRendering(abortSignal);
+        if (abortSignal.aborted) return;
+
+        _(this)._doc.setAttribute('height', _(this)._contentHeightDots);
+
+        _(this)._image = await _(this)._rasterizeDoc();
+      }
+
+      async _rasterizeWhileDeactivatingFigure(abortSignal) {
+        if (_(this)._isFlatPage)
+          throw new Error('Flat page does not have active figure');
+
+        const img = _(this)._doc.$('img');
+
+        if (!img.dataset.originalSrc) {
+          img.dataset.originalSrc = img.src;
+          img.src = 〆.$generateBlankSVGInDataURI(1, 1);
+        }
+
+        _(this)._image = await _(this)._rasterizeDoc();
+      }
+
+      async _rasterizeOnActiveFigure(abortSignal) {
+        if (_(this)._isFlatPage)
+          throw new Error('Flat page does not have active figure');
+
+        const img = _(this)._doc.$('img');
+
+        let src = img.src;
+        if (img.dataset.originalSrc) {
+          src = img.dataset.originalSrc;
+          delete img.dataset.originalSrc;
+        }
+
+        if (src.startsWith('data:')) {
+          img.src = src;
+        } else {
+          const dataURL = await 〆.$cachedFetchImageToDataURL(src);
+          if (abortSignal.aborted) return;
+          img.src = dataURL;
+        }
+
+        _(this)._image = await _(this)._rasterizeDoc();
+      }
+
+      async _rasterizeOnImageLoaded(abortSignal, imgIndex, imgURL) {
+        if (!_(this)._isFlatPage)
+          throw new Error('Non-flat page does not streamed img loading');
+
+        const img = _(this)._doc.$$('img')[imgIndex];
+        img.src = imgURL;
+
+        _(this)._image = await _(this)._rasterizeDoc();
+      }
+
+      _getTargetPointsFromSelectors(doc, selectors, xRefEdge) {
+        return selectors
+          .flatMap((selector) => Array.from(doc.$$(selector)))
+          .map((elem) => {
+            const rect = 〆.$normalizeDOMRect(elem);
+
+            if (elem.dataset.rasterizationDetectorUseFullRect) {
+              return {
+                x: rect.left,
+                y: rect.top,
+                w: rect.width - RASTERIZE_DETECT_OFFSET,
+                h: rect.height - RASTERIZE_DETECT_OFFSET,
+              };
+            } else {
+              xRefEdge ??= 'left';
+
+              return {
+                x:
+                  (elem.tagName.toLowerCase() === 'p'
+                    ? rect[xRefEdge] +
+                      parseFloat(getComputedStyle(elem).textIndent) *
+                        _(this)._dppx
+                    : rect[xRefEdge]) +
+                  parseFloat(
+                    elem.dataset.rasterizationDetectorOffsetX ??
+                      (xRefEdge === 'left'
+                        ? '0'
+                        : (-RASTERIZE_DETECT_SIZE).toString())
+                  ) *
+                    _(this)._dppx,
+                y:
+                  rect.top +
+                  parseFloat(elem.dataset.rasterizationDetectorOffsetY ?? '0') *
+                    _(this)._dppx,
+              };
+            }
+          });
+      }
+
+      async _rasterizeDoc() {
+        _(this)._doc.style.fontSize = `${_(this)._dppx * 〆.$REM_SCALE}px`;
+
+        const url = 〆.$svgXMLToDataURL(
+          _(this)._xmlSerializer.serializeToString(_(this)._doc)
+        );
+
+        return 〆.$convertImageURLToImageBitmap(
+          url,
+          〆.$convertSvgImageToImageBitmapIfPossible
         );
       }
     };
@@ -257,99 +660,130 @@
   (function () {
     let _;
 
-    const RASTERIZE_TIMEOUT_MS = 1000;
-    const RASTERIZE_DETECT_SIZE = 20;
-    const RASTERIZE_DETECT_OFFSET = RASTERIZE_DETECT_SIZE / 2;
+    const RGB_DETECTION_THRESHOLD = 4;
 
     PageRasterizationDetector = class {
       constructor(dppx) {
-        _(this)._targetPoints = [];
+        _(this)._textTargetPoints = [];
+        _(this)._imageTargetPoints = [];
         _(this)._dppx = dppx;
-        _(this)._bgColorRGB = [];
+        _(this)._secondaryBgColorRGB = [];
       }
 
-      setTargetPoints(points) {
-        _(this)._targetPoints = points;
+      setTextTargetPoints(points) {
+        _(this)._textTargetPoints = points;
       }
 
-      setBGColor(bgColor) {
-        _(this)._bgColorRGB = bgColor
-          .substr('rgb('.length)
+      setImageTargetPoints(points) {
+        _(this)._imageTargetPoints = points;
+      }
+
+      setSecondaryBGColor(bgColor) {
+        bgColor = bgColor.trim();
+        _(this)._secondaryBgColorRGB = bgColor
+          .slice('rgba('.length, bgColor.length - 1)
           .split(',')
+          .slice(0, 3)
           .map((val) => val.trim())
           .map((val) => parseInt(val));
+
+        if (
+          _(this)._secondaryBgColorRGB[0] !== _(this)._secondaryBgColorRGB[1] ||
+          _(this)._secondaryBgColorRGB[0] !== _(this)._secondaryBgColorRGB[2] ||
+          _(this)._secondaryBgColorRGB[1] !== _(this)._secondaryBgColorRGB[2]
+        ) {
+          throw new Error(
+            'expecting secondary bg color to be grayscale, but got',
+            _(this)._secondaryBgColorRGB
+          );
+        }
       }
 
-      async detect(image) {
-        const promises = _(this)._targetPoints.map((point) =>
-          _(this)._detectPoint(image, point)
+      detectText = async (rasterization) => {
+        const promises = _(this)._textTargetPoints.map((point) =>
+          _(this)._detectPoint(rasterization, point)
         );
-        return Promise.all(promises);
-      }
+        return (await Promise.all(promises)).every((detected) => detected);
+      };
 
-      async _detectPoint(image, point) {
-        const detectSize = RASTERIZE_DETECT_SIZE * _(this)._dppx;
+      detectImage = async (rasterization, index) =>
+        _(this)._detectPoint(rasterization, _(this)._imageTargetPoints[index]);
+
+      detectImageToBeBlank = async (rasterization, index) =>
+        _(this)._detectPoint(
+          rasterization,
+          _(this)._imageTargetPoints[index],
+          _(this)._secondaryBgColorRGB
+        );
+
+      async _detectPoint(rasterization, point, invertedDetectionBGColor) {
+        const detectWidth = point.w ?? RASTERIZE_DETECT_SIZE * _(this)._dppx;
+        const detectHeight = point.h ?? RASTERIZE_DETECT_SIZE * _(this)._dppx;
         const detectOffset = RASTERIZE_DETECT_OFFSET * _(this)._dppx;
 
         const canvas = $e('canvas');
-        canvas.width = canvas.height = detectSize;
-        const ctx = canvas.getContext('2d', { alpha: false });
+        canvas.width = detectWidth;
+        canvas.height = detectHeight;
+        const ctx = canvas.getContext('2d');
 
-        const rasterizationStart = performance.now();
-        let rasterizationTries = 0;
+        ctx.drawImage(
+          rasterization,
+          point.x + detectOffset,
+          point.y + detectOffset,
+          detectWidth,
+          detectHeight,
+          0,
+          0,
+          detectWidth,
+          detectHeight
+        );
 
-        await $frame();
+        const { data: sample } = ctx.getImageData(
+          0,
+          0,
+          detectWidth,
+          detectHeight
+        );
 
-        while (true) {
-          rasterizationTries++;
-
-          ctx.drawImage(
-            image,
-            point.x + detectOffset,
-            point.y + detectOffset,
-            detectSize,
-            detectSize,
-            0,
-            0,
-            detectSize,
-            detectSize
-          );
-
-          const { data: sample } = ctx.getImageData(
-            0,
-            0,
-            detectSize,
-            detectSize
-          );
-
-          const sampleRGBs = [];
-          for (let i = 0; i < sample.length; i += 4) {
-            sampleRGBs.push([sample[i], sample[i + 1], sample[i + 2]]);
-          }
-
-          const [bgR, bgG, bgB] = _(this)._bgColorRGB;
-          const detectedRasterization = sampleRGBs.some(
-            ([sampleR, sampleG, sampleB]) =>
-              sampleR !== bgR || sampleG !== bgG || sampleB !== bgB
-          );
-
-          if (detectedRasterization) {
-            console.log(
-              `Rasterization detected after ${rasterizationTries} tries for x=${point.x}, y=${point.y}`
-            );
-            return;
-          } else if (
-            performance.now() - rasterizationStart >
-            RASTERIZE_TIMEOUT_MS
-          ) {
-            console.warn(
-              `Rasterization timed out after ${rasterizationTries} tries for x=${point.x}, y=${point.y}, resolving anyway`
-            );
-            return;
-          }
-
-          await $frame();
+        const sampleRGBs = [];
+        for (let i = 0; i < sample.length; i += 4) {
+          sampleRGBs.push([
+            sample[i],
+            sample[i + 1],
+            sample[i + 2],
+            sample[i + 3],
+          ]);
         }
+
+        let detectedRasterization;
+        if (invertedDetectionBGColor) {
+          const [bgR, bgG, bgB] = invertedDetectionBGColor;
+          detectedRasterization = sampleRGBs.every(
+            ([sampleR, sampleG, sampleB]) =>
+              Math.abs(sampleR - bgR) <= RGB_DETECTION_THRESHOLD &&
+              Math.abs(sampleG - bgG) <= RGB_DETECTION_THRESHOLD &&
+              Math.abs(sampleB - bgB) <= RGB_DETECTION_THRESHOLD &&
+              sampleR === sampleG &&
+              sampleR === sampleB
+          );
+        } else {
+          const [bg2R, bg2G, bg2B] = _(this)._secondaryBgColorRGB;
+          detectedRasterization = sampleRGBs.some(
+            ([sampleR, sampleG, sampleB, sampleA]) =>
+              sampleA !== 0 && // regular bg
+              (Math.abs(sampleR - bg2R) > RGB_DETECTION_THRESHOLD ||
+                Math.abs(sampleG - bg2G) > RGB_DETECTION_THRESHOLD ||
+                Math.abs(sampleB - bg2B) > RGB_DETECTION_THRESHOLD)
+          );
+        }
+
+        if (detectedRasterization) {
+          console.log('Rasterization detected');
+        } else {
+          console.log('Failed to detect rasterization');
+        }
+
+        return detectedRasterization;
       }
     };
 
@@ -361,43 +795,14 @@
   })();
 
   (function () {
-    // static functions
-
-    const PAGE_CLASSES_GETTER = Object.freeze({
-      appendix: ({ width }) => {
-        if (width <= 840) {
-          return ['appendix-narrow'];
-        }
-
-        return [];
-      },
-    });
-
-    const SMALL_VIEW_STYLE_PARAMS = Object.freeze({
-      /* paddingTop dynamically assigned below */
-      paddingBottom: 0.4,
-      /* paddingHorizontal dynamically assigned below */
-      fontSize: 0.17,
-      h2FontSize: 0.255,
-      lineHeight: 1.65,
-    });
-
-    const REGULAR_VIEW_STYLE_PARAMS = Object.freeze({
-      paddingBottom: 0.6,
-      paddingHorizontal: 0.12,
-      fontSize: 0.18,
-      h2FontSize: 0.27,
-      lineHeight: 1.6,
-    });
-
     function wrapSVGSource(html) {
       return `
-    <svg xmlns="http://www.w3.org/2000/svg">
-    <foreignObject width="100%" height="100%">
-    ${html}
-    </foreignObject>
-    </svg>
-  `;
+        <svg xmlns="http://www.w3.org/2000/svg">
+          <foreignObject width="100%" height="100%">
+          ${html}
+          </foreignObject>
+        </svg>
+      `;
     }
 
     function getCSSPlaceholderRegexp(tag) {
@@ -419,73 +824,25 @@
 
     class PageSource {
       constructor(source, name) {
-        _(this)._source = source;
+        // firefox issue (in document DOM, cjk + newline + space + cjk is treated as
+        // cjkfull + cjkfull, but not in SVG foreignObject; this has issues with
+        // parenthsis/quotation marks+space and resulting in sizing computation issuess)
+        _(this)._source = source.replace(/\n\s+/g, ' ');
         _(this)._name = name;
-
-        _(this)._smallViewStyleParams = Object.freeze(
-          Object.assign({}, SMALL_VIEW_STYLE_PARAMS, {
-            paddingTop:
-              ($computedStyle(
-                'html',
-                '--small-view-top-content-padding',
-                parseFloat
-              ) +
-                $computedStyle(
-                  'html',
-                  '--small-view-header-height',
-                  parseFloat
-                )) /
-              window.REM_SCALE,
-
-            paddingHorizontal:
-              $computedStyle(
-                'html',
-                '--small-view-content-horizontal-padding',
-                parseFloat
-              ) / window.REM_SCALE,
-          })
-        );
-
-        _(this)._regularViewStyleParams = REGULAR_VIEW_STYLE_PARAMS;
       }
 
-      asRenderedPage(
-        styleSheet,
-        isSmallView,
-        styleParams,
-        abortSignal,
-        fontDataURLs
-      ) {
-        const classes = [
-          ...(isSmallView ? ['page-small'] : []),
-          ...(
-            PAGE_CLASSES_GETTER[_(this)._name] ??
-            function () {
-              return [];
-            }
-          )({ isSmallView, width: styleParams.widthDots / styleParams.dppx }),
-        ];
+      get source() {
+        return _(this)._source;
+      }
 
-        let source = _(this)
-          ._source.replace('/*PAGES-CSS*/', styleSheet)
-          .replace('/*PAGES-CLASSES*/', classes.join(' '));
-
-        Object.assign(
-          styleParams,
-          isSmallView
-            ? _(this)._smallViewStyleParams
-            : _(this)._regularViewStyleParams
-        );
-
-        Object.entries(styleParams).forEach(([name, value]) => {
-          source = source.replace(getCSSPlaceholderRegexp(name), value);
-        });
+      deserialize(styleSheet, fontDataURLs, ...args) {
+        let source = _(this)._source.replace('/*PAGES-CSS*/', styleSheet);
 
         source = insertFonts(source, fontDataURLs);
 
         source = wrapSVGSource(source);
 
-        return new Page(source, styleParams, abortSignal);
+        return new Page(_(this)._name, source, ...args);
       }
     }
 

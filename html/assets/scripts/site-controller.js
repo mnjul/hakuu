@@ -1,9 +1,62 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018-2020 Min-Zhong Lu
+// Copyright (C) 2018-2021 Min-Zhong Lu
 
 'use strict';
 
 (function (exports) {
+  const PAPER_BACKGROUND_BASE_ELEVATION = 54;
+  // firefox's distantlight is darker than other browsers.
+  const PAPER_BACKGROUND_FIREFOX_ELEVATION_FACTOR = 1.25;
+
+  const paperBackgroundLightingAzimuth = ~~(Math.random() * 360);
+  const paperBackgroundLightingElevation =
+    PAPER_BACKGROUND_BASE_ELEVATION *
+    (〆.$isFirefox ? PAPER_BACKGROUND_FIREFOX_ELEVATION_FACTOR : 1);
+
+  const paperBackgroundLightingColor = `hsl(${〆.$computedStyle(
+    'html',
+    '--background-hue'
+  )},${〆.$computedStyle(
+    'html',
+    '--background-saturation'
+  )},${〆.$computedStyle('html', '--background-lightness')})`;
+
+  const PREHENSION_KEYBOARD_ACTIONS = new Map([
+    ['ArrowUp', 'prev'],
+    ['ArrowLeft', 'prev'],
+    ['ArrowDown', 'next'],
+    ['ArrowRight', 'next'],
+  ]);
+
+  function getPaperBackgroundSVGURL(width, height) {
+    const svgDimension =
+      width && height
+        ? `width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"`
+        : '';
+
+    // inspired by https://tympanus.net/codrops/2019/02/19/svg-filter-effects-creating-texture-with-feturbulence/
+    return 〆.$svgXMLToDataURL(`
+      <svg xmlns="http://www.w3.org/2000/svg" ${svgDimension}>
+        <filter id="paper" x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.03" result="noise" numOctaves="20" />
+          <feDiffuseLighting in="noise" lighting-color="${paperBackgroundLightingColor}" surfaceScale="1">
+            <feDistantLight azimuth="${paperBackgroundLightingAzimuth}" elevation="${paperBackgroundLightingElevation}" />
+          </feDiffuseLighting>
+        </filter>
+        <rect x="0" y="0" width="100%" height="100%" filter="url(#paper)" fill="none" />
+      </svg>
+    `);
+  }
+
+  function cubicBézier(t, p0, p1, p2, p3) {
+    return (
+      (1 - t) ** 3 * p0 +
+      3 * (1 - t) ** 2 * t * p1 +
+      3 * (1 - t) * t ** 2 * p2 +
+      t ** 3 * p3
+    );
+  }
+
   const INIT_RAINING = true;
 
   let _;
@@ -14,8 +67,29 @@
       _(this)._initPageName = initPageName;
 
       _(this)._canvasController = canvasController;
+      _(this)._canvasController.onLoadingState = (state) => {
+        _(this)._loading = state;
+      };
+      _(
+        this
+      )._canvasController.getPaperBackgroundSVGURL = getPaperBackgroundSVGURL;
       _(this)._contentManager = contentManager;
       _(this)._audioManager = audioManager;
+
+      _(this)._smallViewSideBarToggleRequestAnimationId = undefined;
+      _(this)._smallViewSideBarToggleBase = $(
+        '#small-view-sidebar-toggle-base'
+      );
+      _(this)._smallViewSideBarToggleFold = $(
+        '#small-view-sidebar-toggle-fold'
+      );
+      _(this)._smallViewSideBarToggleBoxSize = parseInt(
+        $('#small-view-sidebar-toggle > svg')
+          .getAttribute('viewBox')
+          .split(' ')[2]
+      );
+      _(this)._renderSmallViewSidebarToggle(0);
+      _(this)._smallViewSideBarToggleAnimationStart = 0;
 
       Object.defineProperty(_(this), '_raining', {
         get() {
@@ -23,6 +97,11 @@
         },
         set(__raining) {
           $('#rain-control').dataset.raining = __raining;
+          if (__raining) {
+            this._audioManager.unmuteRain();
+          } else {
+            this._audioManager.muteRain();
+          }
         },
       });
 
@@ -57,9 +136,9 @@
 
       Object.defineProperty(_(this), '_currentPage', {
         set(__currentPage) {
-          $('#main-menu').dataset.currentPage = __currentPage;
+          $('body').dataset.currentPage = __currentPage;
           $('#small-view-header-page-title').textContent = $(
-            `#main-menu [data-page="${__currentPage}"]`
+            `#main-menu li[data-page="${__currentPage}"]`
           ).textContent;
         },
       });
@@ -69,94 +148,136 @@
       // requestAnimationFrame: sometimes Chrome doesn't have proper
       // getBoundingRect just at DOMContentLoaded
       document.addEventListener('DOMContentLoaded', async () => {
-        await $frame();
+        // waiting for $indexStyleSheet such that $isSmallView is usable
+        await Promise.all([〆.$frame(), 〆.$indexStyleSheet]);
         _(this)._onReady();
       });
 
-      window.addEventListener('resize', _(this)._onResize.bind(this));
+      _(this)._setupDevicePixelRatioListener();
 
-      $('#main-menu').addEventListener(
-        'click',
-        _(this)._onMainMenuClick.bind(this)
-      );
+      window.addEventListener('resize', this.onResize);
+      window.addEventListener('keydown', this.onKeydown);
 
-      $('#rain-control').addEventListener(
-        'click',
-        _(this)._onRainMenuClick.bind(this)
-      );
+      $('#main-menu').addEventListener('click', this.onMainMenuClick);
 
-      $('#volume-control').addEventListener(
-        'click',
-        _(this)._onVolumeMenuClick.bind(this)
+      $('#rain-control').addEventListener('click', this.onRainMenuClick);
+
+      $('#volume-control').addEventListener('click', this.onVolumeMenuClick);
+
+      $$('.prehension-control').forEach((parent) =>
+        parent.addEventListener('click', this.onPrehensionMenuClick)
       );
 
       $('#small-view-sidebar-toggle').addEventListener(
         'click',
-        _(this)._onSmallViewSidebarToggleClick.bind(this)
+        this.onSmallViewSidebarToggleClick
       );
 
       // hack to trigger mobile safari's :active status
       $('#sidebar').addEventListener('touchstart', () => undefined);
 
+      $('#sidebar').addEventListener('click', this.onSidebarClick);
+
       // disallow scrolling on sidebar and small header
-      Array.from($$('#sidebar, #small-view-header')).forEach((elem) => {
+      $$('#sidebar, #small-view-header').forEach((elem) => {
         elem.addEventListener('touchmove', (evt) => {
           evt.preventDefault();
         });
       });
     }
 
-    async _restart(resetScroll) {
-      _(this)._loading = true;
-      _(this)._canvasController.destroy();
-      await _(this)._canvasController.start(_(this)._raining, resetScroll);
-      _(this)._loading = false;
+    _setupDevicePixelRatioListener() {
+      const generateNewQuery = () => {
+        matchMedia(
+          `(resolution: ${window.devicePixelRatio}dppx)`
+        ).addEventListener(
+          'change',
+          () => {
+            this.onResize();
+            generateNewQuery();
+          },
+          { once: true }
+        );
+      };
+      generateNewQuery();
     }
 
     _onReady() {
       _(this)._raining = INIT_RAINING;
 
+      $(
+        '#site-root'
+      ).style.backgroundImage = `url('${getPaperBackgroundSVGURL()}')`;
+
       _(this)._canvasController.ready();
+
+      _(this)._canvasController.start();
 
       _(this)._switchPage(_(this)._initPageName);
     }
 
-    _onResize() {
-      _(this)._restart();
-    }
+    onResize = () => {
+      _(this)._canvasController.onResize();
 
-    _onMainMenuClick(evt) {
-      if (
-        !(evt.target instanceof HTMLSpanElement) &&
-        !(evt.target instanceof HTMLLIElement)
-      ) {
+      // firefox does some caching which makes the old size svg not expanding
+      // to new viewport size (if becoming bigger). So adding some tag for that.
+      if (〆.$isFirefox) {
+        $(
+          '#site-root'
+        ).style.backgroundImage = `url('${getPaperBackgroundSVGURL()}%3C!--${
+          window.innerWidth
+        }-${window.innerHeight}--%3E')`;
+      }
+    };
+
+    onKeydown = (evt) => {
+      if (evt.shiftKey || evt.altKey || evt.ctrlKey || evt.isComposing) return;
+
+      const action = PREHENSION_KEYBOARD_ACTIONS.get(evt.key);
+      if (!action) return;
+
+      _(this)._canvasController.inPageSwitchView(action);
+      evt.preventDefault();
+      evt.stopPropagation();
+    };
+
+    onMainMenuClick = (evt) => {
+      if (!(evt.target instanceof HTMLLIElement)) {
         return;
       }
 
-      _(this)._switchPage(evt.target.dataset.page);
-      $('body').classList.remove('small-view-sidebar-visible');
-    }
+      evt.stopPropagation();
 
-    _onRainMenuClick(evt) {
+      _(this)._switchPage(evt.target.dataset.page);
+      _(this)._toggleSmallViewSidebar(false);
+    };
+
+    onRainMenuClick = (evt) => {
+      evt.stopPropagation();
+
       if (!(evt.target instanceof HTMLSpanElement)) {
         return;
       }
 
       if (evt.target.id.endsWith('stop') && _(this)._raining) {
         _(this)._raining = false;
-        _(this)._restart();
+        _(this)._canvasController.raining = false;
+        _(this)._canvasController.restartRainEngine();
       } else if (evt.target.id.endsWith('start') && !_(this)._raining) {
         _(this)._raining = true;
-        _(this)._restart();
+        _(this)._canvasController.raining = true;
+        _(this)._canvasController.restartRainEngine();
       }
-    }
+    };
 
-    _onVolumeMenuClick(evt) {
+    onVolumeMenuClick = (evt) => {
+      evt.stopPropagation();
+
       if (!(evt.target instanceof HTMLSpanElement)) {
         return;
       }
 
-      const level = evt.target.dataset.level;
+      const { level } = evt.target.dataset;
 
       _(this)._volumeLevel = level;
 
@@ -165,11 +286,123 @@
       } else {
         _(this)._audioManager.playAndSetVolume(level);
       }
+    };
+
+    onPrehensionMenuClick = (evt) => {
+      evt.stopPropagation();
+
+      if (!(evt.target instanceof HTMLSpanElement)) {
+        return;
+      }
+
+      const { action } = evt.target.dataset;
+
+      _(this)._canvasController.inPageSwitchView(action);
+    };
+
+    onSidebarClick = () => {
+      _(this)._toggleSmallViewSidebar(false);
+    };
+
+    onSmallViewSidebarToggleClick = () => {
+      _(this)._toggleSmallViewSidebar();
+    };
+
+    _toggleSmallViewSidebar(state) {
+      $('body').classList.toggle('small-view-sidebar-visible', state);
+      cancelAnimationFrame(_(this)._smallViewSideBarToggleRequestAnimationId);
+
+      _(this)._smallViewSideBarToggleRequestAnimationDirection = $(
+        'body'
+      ).classList.contains('small-view-sidebar-visible')
+        ? 'forward'
+        : 'backward';
+
+      _(this)._smallViewSideBarToggleAnimationStart = performance.now();
+      _(this)._smallViewSideBarToggleRequestAnimationId = requestAnimationFrame(
+        this.animateSmallViewSidebarToggle
+      );
     }
 
-    // eslint-disable-next-line class-methods-use-this
-    _onSmallViewSidebarToggleClick() {
-      $('body').classList.toggle('small-view-sidebar-visible');
+    animateSmallViewSidebarToggle = () => {
+      const elapsed =
+        performance.now() - _(this)._smallViewSideBarToggleAnimationStart;
+      const totalTime =
+        〆.$computedStyle(
+          'html',
+          '--small-view-sidebar-transition-duration',
+          parseFloat
+        ) * 1000;
+
+      const phase = cubicBézier(
+        Math.min(elapsed / totalTime, 1),
+        0,
+        0.8,
+        0.8,
+        1
+      );
+
+      const actualPhase =
+        _(this)._smallViewSideBarToggleRequestAnimationDirection === 'forward'
+          ? phase
+          : 1 - phase;
+      _(this)._renderSmallViewSidebarToggle(actualPhase);
+
+      if (phase < 1) {
+        _(
+          this
+        )._smallViewSideBarToggleRequestAnimationId = requestAnimationFrame(
+          this.animateSmallViewSidebarToggle
+        );
+      }
+    };
+
+    _renderSmallViewSidebarToggle(phase) {
+      const SIDE = _(this)._smallViewSideBarToggleBoxSize;
+
+      const BORDER_RADIUS_FACTOR = 0.1;
+      const FOLDING_FACTOR = 2.5;
+      const FOLDING_OFFSET_FACTOR = 0.1;
+
+      const BORDER_RADIUS = SIDE * BORDER_RADIUS_FACTOR;
+      const FOLDING_OFFSET = SIDE * FOLDING_OFFSET_FACTOR;
+
+      const foldingXInterpolated =
+        SIDE -
+        BORDER_RADIUS +
+        (BORDER_RADIUS * FOLDING_FACTOR - (SIDE - BORDER_RADIUS * 0.5)) * phase;
+      const foldingYInterpolated =
+        BORDER_RADIUS +
+        (SIDE - BORDER_RADIUS * FOLDING_FACTOR - BORDER_RADIUS) * phase;
+
+      _(this)._smallViewSideBarToggleBase.setAttribute(
+        'd',
+        `
+          M 0 ${BORDER_RADIUS}
+          A ${BORDER_RADIUS} ${BORDER_RADIUS} 0 0 1 ${BORDER_RADIUS} 0
+          H ${foldingXInterpolated}
+          L ${SIDE}, ${foldingYInterpolated}
+          V ${SIDE - BORDER_RADIUS}
+          A ${BORDER_RADIUS} ${BORDER_RADIUS} 0 0 1 ${
+          SIDE - BORDER_RADIUS
+        } ${SIDE}
+          H ${BORDER_RADIUS}
+          A ${BORDER_RADIUS} ${BORDER_RADIUS} 0 0 1 0 ${SIDE - BORDER_RADIUS}
+          z
+        `
+      );
+
+      _(this)._smallViewSideBarToggleFold.setAttribute(
+        'd',
+        `
+          M ${foldingXInterpolated}, 0
+          L ${foldingXInterpolated + FOLDING_OFFSET}, ${
+          foldingYInterpolated + FOLDING_OFFSET
+        }
+          L ${SIDE}, ${foldingYInterpolated}
+          z
+          `
+      );
     }
 
     // eslint-disable-next-line class-methods-use-this
@@ -183,8 +416,9 @@
           styleElem.textContent = `
           @font-face {
             font-family: 'MIH ${fontName.toUpperCase()}';
-            font-weight: ${$computedStyle('body', 'font-weight')};
+            font-weight: ${〆.$computedStyle('body', 'font-weight')};
             src: url('${url}') format('woff2');
+            font-display: block;
           }
         `;
 
@@ -203,15 +437,18 @@
 
     async _switchPage(pageName) {
       _(this)._loading = true;
+
+      await _(this)._canvasController.stopPage();
+
+      _(this)._currentPage = pageName;
+
       const pageSourcePromise = _(this)._contentManager.getPageSourcePromise(
         pageName
       );
 
       _(this)._canvasController.pageSourcePromise = pageSourcePromise;
-      _(this)._restart(true);
 
-      await pageSourcePromise;
-      _(this)._currentPage = pageName;
+      _(this)._canvasController.startPage();
     }
 
     init() {

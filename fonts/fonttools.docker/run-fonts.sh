@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This is part of Hakuu, a web site, and is licensed under AGPLv3.
+# Copyright (C) 2018-2021 Min-Zhong Lu
+
 cd /
 
 pyftsubset cjk.otf --text-file=cjk.txt
@@ -8,7 +11,7 @@ python otf2ttf.py cjk.subset.otf
 pyftsubset cjk_punctuation.otf --text-file=cjk_punctuation.txt
 python otf2ttf.py cjk_punctuation.subset.otf
 
-pyftmerge cjk.subset.ttf cjk_punctuation.subset.ttf
+pyftmerge cjk_punctuation.subset.ttf cjk.subset.ttf 
 
 pyftsubset latin.ttf --text-file=latin.txt
 
@@ -33,12 +36,3 @@ woff2_compress merged.ttf
 woff2_compress latin-sans.subset.ttf
 
 mv merged.woff2 cjk-sans.subset.woff2
-
-
-
-
-
-
-
-
-

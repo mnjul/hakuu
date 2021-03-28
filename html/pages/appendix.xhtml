@@ -1,15 +1,136 @@
 <!--
  This is part of Hakuu, a web site, and is licensed under AGPLv3.
- Copyright (C) 2018-2020 Min-Zhong Lu
+ Copyright (C) 2018-2021 Min-Zhong Lu
  -->
-<html xmlns="http://www.w3.org/1999/xhtml" id="svg-page-root">
+<html xmlns="http://www.w3.org/1999/xhtml" id="page-root">
   <head>
     <style>
       /*<![CDATA[*/ /*PAGES-CSS*/ /*]]>*/
     </style>
+    <style id="dynamic-page-css"></style>
+    <style>
+      /*<![CDATA[*/
+      .appendix-version {
+        display: grid;
+        grid-template-columns: 2.16rem auto;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+          'info image'
+          '. content';
+        column-gap: 0.2rem;
+        row-gap: 0.18rem;
+
+        margin-top: 1.2rem;
+      }
+
+      .appendix-version:first-of-type {
+        margin-top: 0.58rem;
+      }
+
+      .appendix-version-info {
+        grid-area: info;
+        justify-self: end;
+        align-self: end;
+        text-align: right;
+        line-height: 0.16rem;
+      }
+
+      .appendix-version-name {
+        margin: 0;
+      }
+
+      .appendix-version-noname {
+        margin-right: -0.6em;
+      }
+
+      .appendix-version-date,
+      .appendix-version-svcn {
+        font-size: 0.15rem;
+        line-height: 0.27rem;
+      }
+
+      .appendix-version-svcn::after {
+        content: '/';
+        margin: 0 0.8ch;
+        font-size: 80%;
+      }
+
+      .appendix-version img {
+        grid-area: image;
+        width: 74%;
+      }
+
+      .appendix-version-content {
+        grid-area: content;
+      }
+
+      .appendix-version-content p {
+        text-indent: var(--default-text-indent);
+      }
+
+      .page-small .appendix-version-content p {
+        text-indent: 0;
+      }
+
+      .appendix-narrow .appendix-version {
+        grid-template-areas:
+          'info image'
+          'content content';
+      }
+
+      .appendix-narrow .appendix-version img {
+        width: 100%;
+      }
+
+      .page-small .appendix-version {
+        grid-template-columns: auto;
+        grid-template-rows: auto auto auto;
+        grid-template-areas:
+          'info'
+          'image'
+          'content';
+        row-gap: 0.12rem;
+
+        margin-top: 0.94rem;
+        --horizontal-offset: calc(-1 * var(--padding-horizontal));
+        margin-left: var(--horizontal-offset);
+        margin-right: var(--horizontal-offset);
+      }
+
+      .page-small .appendix-version:first-of-type {
+        margin-top: 0.74rem;
+      }
+
+      .page-small .appendix-version-info {
+        justify-self: center;
+        align-self: center;
+        text-align: center;
+      }
+
+      .page-small .appendix-version-noname {
+        margin-right: 0;
+      }
+
+      .page-small .appendix-version-date,
+      .page-small .appendix-version-svcn {
+        font-size: 0.16rem;
+        line-height: 0.32rem;
+      }
+
+      .page-small .appendix-version img {
+        grid-area: image;
+        width: 100%;
+        margin-bottom: 0.06rem;
+      }
+
+      .page-small .appendix-version-content {
+        padding: 0 var(--padding-horizontal);
+      }
+      /*]]>*/
+    </style>
   </head>
-  <body id="svg-computer-body" class="/*PAGES-CLASSES*/">
-    <div id="svg-main-container">
+  <body id="page-body">
+    <div id="page-main-container">
       <section>
         <article>
           <p class="rasterization-detector-target">
@@ -25,7 +146,11 @@
               >
               <span class="appendix-version-date">4635–3287</span>
             </div>
-            <img src="assets/images/appendix/appendix_1_1.png" />
+            <img
+              src="assets/images/appendix/appendix-1-1.png"
+              data-width="1029"
+              data-height="622"
+            />
             <div class="appendix-version-content">
               <p>
                 徟一姠蛃湹鈺屮戫擛冇，猗屮弇逜焲豊兀摥仈汃。棯泏伂儚搷駥圪一啷莯蚕怞氿盄亍，&lt;
@@ -54,7 +179,11 @@
               <span class="appendix-version-svcn">138 Aspernatur</span
               ><span class="appendix-version-date">1676–6847</span>
             </div>
-            <img src="assets/images/appendix/appendix_1_2.png" />
+            <img
+              src="assets/images/appendix/appendix-1-2.png"
+              data-width="817"
+              data-height="465"
+            />
             <div class="appendix-version-content">
               <p>
                 崱昒彴黖裞敿劦一猋觙栝岢阞昜乜，嗃蛫亍极姼萿芤汃屮斻餀拺冇狚
@@ -75,7 +204,11 @@
               <span class="appendix-version-svcn">676 Voluptatem</span
               ><span class="appendix-version-date">7945–3877</span>
             </div>
-            <img src="assets/images/appendix/appendix_2_1.png" />
+            <img
+              src="assets/images/appendix/appendix-2-1.png"
+              data-width="863"
+              data-height="535"
+            />
             <div class="appendix-version-content">
               <p>
                 丱栲怉剫牮鸂葶飶汏异玴妧阽侘杚裬屮礿榵觠。悰一峸梇犆腯丌榠駩爿，荺亍耇梐甯榃亍睾爿宄。
@@ -104,7 +237,11 @@
               <span class="appendix-version-svcn">1374 Laboriosam</span
               ><span class="appendix-version-date">8371–9687</span>
             </div>
-            <img src="assets/images/appendix/appendix_3_1.png" />
+            <img
+              src="assets/images/appendix/appendix-3-1.png"
+              data-width="1030"
+              data-height="627"
+            />
             <div class="appendix-version-content">
               <p>
                 菮枟奷澽鳪褵妀一稊畣挹阹犰恛屮，戣媄丌徂炵溙垀氿屮怍馻咢卬炖。耟一侺庱确搋丌廑骿夬，梲乇衵蛈矞銃乜熆仂刉。夬烋芫梣炷讕睔幊冱扜咭伾瓨帗沏僉兀侗漮煲。
@@ -125,7 +262,11 @@
               <span class="appendix-version-svcn">4824 Enim</span
               ><span class="appendix-version-date">1789–2317</span>
             </div>
-            <img src="assets/images/appendix/appendix_4_0.png" />
+            <img
+              src="assets/images/appendix/appendix-4-0.png"
+              data-width="1027"
+              data-height="635"
+            />
             <div class="appendix-version-content">
               <p>
                 莤一泚婝棶鉥丌漊錹冘，寀丌洴袷徦毻屮雿毌匜。閌抯刓趧鉣鄵奷一堍琄烑宓仨祄兀，楸揟丌坱粀腷呴氶乇秅慛俅巿侇。毌涘牬赻峟灡跢跠扦汌苶岕坽祅吰鉎兀坱稰傮。爿哠盵盓珇齴瑂靲扠伬怤刞抸狖阯滖乜祅蓖蒍。掽一殄偛愘綎屮墈噳丮，崮乜昳偀蛘搷屮獑圠庂。釿岢扢澬綎瘳孖一椪捸娳泔扐柤兀，觥傛亍穻柊椹构氿兀怙漰洑厹枘。
@@ -152,7 +293,11 @@
               <span class="appendix-version-svcn">2467 Labore</span
               ><span class="appendix-version-date">3479–1349</span>
             </div>
-            <img src="assets/images/appendix/appendix_5_0.png" />
+            <img
+              src="assets/images/appendix/appendix-5-0.png"
+              data-width="851"
+              data-height="695"
+            />
             <div class="appendix-version-content">
               <p>
                 跠筌兀咘粁摀岠丼丌妴愬砉仂斻。脕一剉莈渿祹乇摙觱尐，桷乜玿莐愝瑑兀鄡冇帄。仈栟抭捥胕鷾睟嗩价朼洙刡妴岠沎鉲亍岦僣筤。雈穻价瞜嫄麇夼一溈琋栒咁卌峸兀，綌愖屮坫峘蝆狑圢兀刱暡虼丏侗。
@@ -178,7 +323,11 @@
               <span class="appendix-version-svcn">2337 Voluptatem</span
               ><span class="appendix-version-date">8914–</span>
             </div>
-            <img src="assets/images/appendix/appendix_5_5.png" />
+            <img
+              src="assets/images/appendix/appendix-5-5.png"
+              data-width="842"
+              data-height="656"
+            />
             <div class="appendix-version-content">
               <p>
                 崒兀俬偳郻楘乇雿爿屴。湇侅囟澽煰餩厊一惁焎欴泑仚侳丌，媺閐乇殀咮剺祅仜亍侔慞羑圠咂。丮捇厔皏邾躞艀趎伬彴珅岈呯玢吽絺乇厒漉瑔。菻咈巟橑尟褮灱一
@@ -200,7 +349,11 @@
               <span class="appendix-version-svcn">1247 Ipsum</span
               ><span class="appendix-version-date">9748–</span>
             </div>
-            <img src="assets/images/appendix/appendix_6_1.png" />
+            <img
+              src="assets/images/appendix/appendix-6-1.png"
+              data-width="1150"
+              data-height="716"
+            />
             <div class="appendix-version-content">
               <p>
                 傱猲乇姃柼葇怜刌亍抰鋮洳圠怗。淝一峌剬匑搮乇誒蝹爿，悐亍郈淈菹嵊兀廕爿宁。鄁狖旯頵瑔盦劦一楰釮窌陃庀勀兀，痻揊乇呣
@@ -227,9 +380,9 @@
               ><span class="appendix-version-date">2171–</span>
             </div>
             <img
-              src="assets/images/appendix/appendix_7_0.png"
-              data-rasterization-detector-offset-x="200"
-              data-rasterization-detector-offset-y="100"
+              src="assets/images/appendix/appendix-7-0.png"
+              data-width="1408"
+              data-height="717"
             />
             <div class="appendix-version-content">
               <p>

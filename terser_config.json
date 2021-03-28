@@ -1,43 +1,23 @@
 {
   "mangle": {
     "properties": {
-      "regex": "^(?!\\$.*$).*",
       "reserved": [
-        "aborted",
-        "signal",
-        "Latin",
-        "CJK",
-        "LatinSans",
-        "CJKSans",
-        "medium",
-        "low",
-        "loud",
-        "silent",
-        "dppx",
-        "widthDots",
-        "paddingTop",
-        "paddingHorizontal",
-        "paddingBottom",
-        "pMarginBottom",
-        "fontSize",
-        "h2FontSize",
-        "lineHeight",
-        "raining",
-        "innerNavTarget",
-        "action",
-        "target",
+        "〆",
+        "$",
+        "$$",
+        "$e",
         "_raining",
         "_loading",
         "_audioAvailable",
         "_volumeLevel",
         "_currentPage",
-        "preface",
-        "portrayal",
-        "moment",
-        "postface",
-        "appendix",
+        "_rasterizationWidthDots",
+        "_rasterizationHeightDots",
+        "raining",
         "rasterizationDetectorOffsetX",
-        "rasterizationDetectorOffsetY"
+        "rasterizationDetectorOffsetY",
+        "rasterizationDetectorUseFullRect",
+        "isFlatPage"
       ]
     }
   }

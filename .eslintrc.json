@@ -1,13 +1,14 @@
 {
   "env": {
     "browser": true,
-    "es2020": true
+    "es2021": true
   },
   "extends": "esnext",
   "rules": {
     "prefer-const": ["error", { "ignoreReadBeforeAssign": true }],
     "import/no-commonjs": "off",
-    "no-else-return": "off"
+    "no-else-return": "off",
+    "no-invalid-this": "off"
   },
   "ignorePatterns": [
     "node_modules/**",
@@ -19,8 +20,6 @@
     "$": "readonly",
     "$$": "readonly",
     "$e": "readonly",
-    "$frame": "readonly",
-    "$time": "readonly",
-    "$computedStyle": "readonly"
+    "〆": "readonly"
   }
 }

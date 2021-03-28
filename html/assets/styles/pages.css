@@ -1,17 +1,24 @@
 /*
  * This is part of Hakuu, a web site, and is licensed under AGPLv3.
- * Copyright (C) 2018-2020 Min-Zhong Lu
+ * Copyright (C) 2018-2021 Min-Zhong Lu
  */
 
+#page-body {
+  --padding-bottom: 0.6rem;
+  --font-size: 0.18rem;
+  --h2-font-size: 0.27rem;
+  --line-height: 0.29rem;
+}
+
+#page-body.page-small {
+  --padding-bottom: 0.4rem;
+  --font-size: 0.17rem;
+  --h2-font-size: 0.255rem;
+  --line-height: 0.29rem;
+}
+
 :root {
-  --dppx: /*!%DPPX%*/ 0;
-  --width: /*!%WIDTHDOTS%*/ 0px;
-  --padding-horizontal: /*!%PADDINGHORIZONTAL%*/ 0rem;
-  --padding-top: /*!%PADDINGTOP%*/ 0rem;
-  --padding-bottom: /*!%PADDINGBOTTOM%*/ 0rem;
-  --font-size: /*!%FONTSIZE%*/ 0rem;
-  --h2-font-size: /*!%H2FONTSIZE%*/ 0rem;
-  --line-height: /*!%LINEHEIGHT%*/ 0;
+  --nav-and-subtitle-font-size: 0.16rem;
 }
 
 *,
@@ -20,50 +27,47 @@
   box-sizing: border-box;
 }
 
-svg {
-  font-size: calc(
-    var(--dppx) * 100px
-  ); /* multiply by 100 to work around user-agent's minimum font sizes */
-}
-
 @font-face {
   font-family: 'MIH Latin';
   font-weight: 200;
   src: url('/*!%LATINFONT%*/0') format('woff2');
+  font-display: block;
 }
 
 @font-face {
   font-family: 'MIH CJK';
   font-weight: 200;
   src: url('/*!%CJKFONT%*/0') format('woff2');
+  font-display: block;
 }
 
 @font-face {
   font-family: 'MIH Latin Sans';
   font-weight: 400;
   src: url('/*!%LATINSANSFONT%*/0') format('woff2');
+  font-display: block;
 }
 
 @font-face {
   font-family: 'MIH CJK Sans';
   font-weight: 400;
   src: url('/*!%CJKSANSFONT%*/0') format('woff2');
+  font-display: block;
 }
 
-#svg-computer-body,
-#svg-computer-body * {
+#page-body,
+#page-body * {
   box-sizing: border-box;
 }
 
-#svg-computer-body {
+#page-body {
   margin: 0;
   padding: 0;
-  background-color: #fafafa;
   width: var(--width);
-  color: hsl(0, 0%, 30%);
+  color: var(--text-color);
 }
 
-#svg-main-container {
+#page-main-container {
   --letter-spacing: 0.01rem;
 
   width: var(--width);
@@ -73,6 +77,7 @@ svg {
   line-height: var(--line-height);
   text-rendering: optimizeLegibility;
   letter-spacing: var(--letter-spacing);
+  --default-text-indent: calc(2em + calc(var(--letter-spacing) * 2));
   padding: var(--padding-top) var(--padding-horizontal) var(--padding-bottom);
   font-synthesis: none;
 }
@@ -82,11 +87,19 @@ blockquote {
   font-weight: 400;
   letter-spacing: 0.005rem;
   margin: 0;
-  color: hsl(0, 0%, 40%);
+  color: var(--secondary-text-color);
 }
 
 article:not(:first-of-type) {
   margin-top: 12em;
+}
+
+/* safari, despite user-select: none */
+p,
+h2,
+.in-page-menu span,
+.appendix-version-date /* page-specific class, but seems better here */ {
+  cursor: default;
 }
 
 p {
@@ -94,8 +107,16 @@ p {
   margin-bottom: 1.5em;
 }
 
-p:not(.no-indent) {
-  text-indent: calc(2em + calc(var(--letter-spacing) * 2));
+article:not(.no-auto-indent) > p {
+  text-indent: var(--default-text-indent);
+}
+
+.page-small article:not(.no-auto-indent) > p:not(.force-indent) {
+  text-indent: 0;
+}
+
+.page-small p {
+  margin-bottom: 2em;
 }
 
 p:last-child {
@@ -116,41 +137,50 @@ blockquote:not(:last-child) {
   margin-bottom: 6em;
 }
 
+.consecutive-blockquotes p {
+  margin-bottom: 1em;
+}
+
 .page-small blockquote.commentary p {
   margin-left: calc(2em + calc(var(--letter-spacing) * 2));
   margin-right: calc(2em + calc(var(--letter-spacing) * 2));
 }
 
 a {
-  -webkit-text-decoration: dashed underline hsl(0, 0%, 50%);
-  -webkit-text-underline-offset: 0.5ex;
-  text-decoration: dashed underline hsl(0, 0%, 50%);
+  /* don't shorthand these --- safari needs vendor prefix on shorthanding */
+  text-decoration-style: dashed;
+  text-decoration-line: underline;
+  text-decoration-color: var(--secondary-text-color);
+  text-decoration-thickness: 0.25px;
   text-underline-offset: 0.5ex;
-  color: hsl(0, 0%, 30%); /* normalize.css not doing this for edge */
+  color: var(--text-color);
 }
 
 blockquote a {
-  color: hsl(0, 0%, 40%);
+  color: var(--secondary-text-color);
 }
 
 .in-page-menu {
-  font-size: 93.75%;
+  font-size: var(--nav-and-subtitle-font-size);
 
   margin-bottom: 6em;
-
-  line-height: 1.75;
 }
 
-.in-page-menu li {
-  list-style: none;
-  margin-left: 3em;
-}
-
+.in-page-menu a,
 .in-page-menu span {
   display: block;
+  width: max-content;
+  max-width: calc(100% - var(--padding-horizontal) * 2);
+  line-height: 0.18rem;
+  margin-bottom: 0.1rem;
 }
 
-.in-page-menu li + span {
+.in-page-menu a {
+  margin-left: 3em;
+  text-decoration: none;
+}
+
+.in-page-menu a + span {
   margin-top: 2em;
 }
 
@@ -160,148 +190,46 @@ h2 {
   margin-bottom: 2em;
 }
 
+img {
+  opacity: 0.8;
+}
+
+article figure {
+  width: 61.8%;
+  min-width: 4.4rem;
+  margin: 0 auto;
+}
+
+.page-small article figure {
+  width: 100%;
+  min-width: 0;
+}
+
+article figure img {
+  width: 100%;
+}
+
+article figcaption {
+  margin-top: -0.5em;
+  font-size: var(--article-figcaption-font-size);
+}
+
+article figcaption p {
+  line-height: 1.33;
+  text-indent: 0 !important;
+}
+
 .article-subtitle {
   display: block;
-  font-size: var(--font-size);
+  font-size: var(--nav-and-subtitle-font-size);
   margin-left: var(--article-subtitle-margin-left);
 }
 
-.portrayal-separator {
+.article-section-separator {
   margin-top: 1.5em;
   margin-bottom: 1.5em;
   margin-left: 6em;
   border: none;
-  border-top: 0.005rem solid hsl(0, 0%, 30%);
+  border-top: 0.005rem solid var(--text-color);
   width: 8em;
-}
-
-.portrayal-unbreakable {
-  white-space: nowrap;
-  word-break: keep-all;
-  letter-spacing: 0;
-}
-
-.postface-declaration p {
-  line-height: 1.5;
-  margin-bottom: 1.5em;
-  font-size: 93.75%;
-}
-
-.postface-declaration-unit {
-  white-space: nowrap;
-}
-
-.appendix-version {
-  display: grid;
-  grid-template-columns: 2.16rem auto;
-  grid-template-rows: auto auto;
-  grid-template-areas:
-    'info image'
-    '. content';
-  column-gap: 0.2rem;
-  row-gap: 0.18rem;
-
-  margin-top: 1.2rem;
-}
-
-.appendix-version:first-of-type {
-  margin-top: 0.58rem;
-}
-
-.appendix-version-info {
-  grid-area: info;
-  justify-self: end;
-  align-self: end;
-  text-align: right;
-  line-height: 1;
-}
-
-.appendix-version-name {
-  font-size: 0.22rem;
-  margin: 0;
-}
-
-.appendix-version-noname {
-  margin-right: -0.6em;
-}
-
-.appendix-version-date,
-.appendix-version-svcn {
-  font-size: 0.15rem;
-  line-height: 1.8;
-}
-
-.appendix-version-svcn::after {
-  content: '/';
-  margin: 0 0.8ch;
-  font-size: 80%;
-}
-
-.appendix-version img {
-  grid-area: image;
-  width: 74%;
-  box-shadow: 0 0 0.02rem 0.01rem #f0f0f0;
-}
-
-.appendix-version-content {
-  grid-area: content;
-}
-
-.appendix-narrow .appendix-version {
-  grid-template-areas:
-    'info image'
-    'content content';
-}
-
-.appendix-narrow .appendix-version img {
-  width: 100%;
-}
-
-.page-small .appendix-version {
-  grid-template-columns: auto;
-  grid-template-rows: auto auto auto;
-  grid-template-areas:
-    'info'
-    'image'
-    'content';
-  row-gap: 0.12rem;
-
-  margin-top: 0.94rem;
-  --horizontal-offset: calc(-1 * var(--padding-horizontal));
-  margin-left: var(--horizontal-offset);
-  margin-right: var(--horizontal-offset);
-}
-
-.page-small .appendix-version:first-of-type {
-  margin-top: 0.74rem;
-}
-
-.page-small .appendix-version-info {
-  justify-self: center;
-  align-self: center;
-  text-align: center;
-}
-
-.page-small .appendix-version-name {
-  font-size: 0.22rem;
-}
-
-.page-small .appendix-version-noname {
-  margin-right: 0;
-}
-
-.page-small .appendix-version-date,
-.page-small .appendix-version-svcn {
-  font-size: 0.16rem;
-  line-height: 2;
-}
-
-.page-small .appendix-version img {
-  grid-area: image;
-  width: 100%;
-  margin-bottom: 0.06rem;
-}
-
-.page-small .appendix-version-content {
-  padding: 0 var(--padding-horizontal);
 }

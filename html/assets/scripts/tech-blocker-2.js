@@ -1,5 +1,5 @@
 // This is part of Hakuu, a web site, and is licensed under AGPLv3.
-// Copyright (C) 2018-2020 Min-Zhong Lu
+// Copyright (C) 2018-2021 Min-Zhong Lu
 
 'use strict';
 
@@ -9,8 +9,10 @@
     const { c: b } = a;
     const d = [];
     const e = [...d];
-    const f = [e].flat();
+    const f = [e].flatMap(() => e);
     const g = f ?? [];
+    let h = undefined;
+    h ??= a.c.matchAll(/^$/g);
 
     const canvas = document.createElement('canvas');
     if (
@@ -19,10 +21,11 @@
       return;
     }
 
-    clearTimeout(window.esBlockerTimeout);
-    Array.from(document.querySelectorAll('.tech-blocker')).forEach((elem) => {
+    globalThis.clearTimeout(globalThis.esBlockerTimeout);
+    document.querySelectorAll('.tech-blocker').forEach((elem) => {
       elem.dataset.b = b;
       elem.dataset.g = g;
+      elem.dataset.h = h;
       elem.remove();
     });
   }
