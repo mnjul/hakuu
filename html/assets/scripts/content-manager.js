@@ -20,29 +20,29 @@
     'appendix',
   ];
 
-  let _;
+  exports.ContentManager = class ContentManager {
+    static PageSourceClass;
 
-  class ContentManager {
+    #pageSources = new Map(); // pagename => PageSource
+
+    #pageFetchPromises; // pagename => Promise
+    #styleSheetFetchPromise;
+    #fontFetchPromises; // fontname => Promise
+
     constructor() {
-      _(this)._pageSources = new Map(); // pagename => PageSource
-
-      _(this)._pageFetchPromises = undefined; // pagename => Promise
-      _(this)._styleSheetFetchPromise = undefined;
-      _(this)._fontFetchPromises = undefined; // fontname => Promise
-
-      _(this)._load();
+      this.#load();
     }
 
-    _load() {
-      _(this)._pageFetchPromises = new Map(
+    #load() {
+      this.#pageFetchPromises = new Map(
         PAGES.map((name) => [name, fetch(`pages/${name}.xhtml`)])
       );
 
-      _(this)._prefetchPrehensionFigures();
+      this.#prefetchPrehensionFigures();
 
-      _(this)._styleSheetFetchPromise = fetch('assets/styles/pages.css');
+      this.#styleSheetFetchPromise = fetch('assets/styles/pages.css');
 
-      _(this)._fontFetchPromises = new Map(
+      this.#fontFetchPromises = new Map(
         Array.from(FONTS.entries()).map(([name, filename]) => [
           name,
           fetch(`assets/fonts/${filename}`),
@@ -51,25 +51,25 @@
     }
 
     getPageSourcePromise(name) {
-      if (!_(this)._pageSources.has(name)) {
-        _(this)._pageSources.set(name, _(this)._loadPage(name));
+      if (!this.#pageSources.has(name)) {
+        this.#pageSources.set(name, this.#loadPage(name));
       }
 
-      return _(this)._pageSources.get(name);
+      return this.#pageSources.get(name);
     }
 
-    _loadPage(name) {
-      return _(this)
-        ._pageFetchPromises.get(name)
+    #loadPage(name) {
+      return this.#pageFetchPromises
+        .get(name)
         .then((resp) => resp.text())
-        .then((source) => new window.PageSource(source, name));
+        .then((source) => new ContentManager.PageSourceClass(source, name));
     }
 
-    async _prefetchPrehensionFigures() {
+    async #prefetchPrehensionFigures() {
       const source = (await this.getPageSourcePromise('prehension')).source;
       const allMatches = Array.from(source.matchAll(/src="([^"]+)"/g));
       const fetchMatch = (index) =>
-        〆.$cachedFetchImageToDataURL(allMatches[index][1]);
+        〆.cachedFetchImageToDataURL(allMatches[index][1]);
       fetchMatch(0);
       fetchMatch(allMatches.length - 1);
       fetchMatch(1);
@@ -80,19 +80,15 @@
     // Promise.all or async.
     getFontBlobPromises() {
       return new Map(
-        Array.from(
-          _(this)._fontFetchPromises.entries()
-        ).map(([name, promise]) => [name, promise.then((resp) => resp.blob())])
+        Array.from(this.#fontFetchPromises.entries()).map(([name, promise]) => [
+          name,
+          promise.then((resp) => resp.blob()),
+        ])
       );
     }
 
-    getPageStyleSheetPromise() {
-      return _(this)._styleSheetFetchPromise.then((resp) => resp.text());
+    getPagesStyleSheetPromise() {
+      return this.#styleSheetFetchPromise.then((resp) => resp.text());
     }
-  }
-
-  _ = window.createInternalFunction(ContentManager);
-  if (window.DEBUG) window.internalFunctions[ContentManager] = _;
-
-  exports.ContentManager = ContentManager;
+  };
 })(window);

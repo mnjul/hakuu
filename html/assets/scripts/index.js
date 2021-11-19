@@ -6,8 +6,14 @@
 (function (exports) {
   const INIT_PAGE_NAME = 'preface';
 
+  const RainEngineClient = window.RainEngineClient;
+
+  window.ContentManager.PageSourceClass = window.PageSource;
+  window.RainEngineClient.rainEngine = window.rainEngine;
+  window.CanvasController.RainEngineClientClass = RainEngineClient;
+
   const contentManager = new window.ContentManager();
-  const canvasController = new window.CanvasController(window.RainEngineClient);
+  const canvasController = new window.CanvasController();
   const audioManager = new window.AudioManager();
   const siteController = new window.SiteController(
     INIT_PAGE_NAME,
@@ -25,5 +31,14 @@
       audioManager,
       siteController,
     };
+  } else {
+    delete window.rainEngine;
+    delete window.RainEngineClient;
+    delete window.Page;
+    delete window.PageSource;
+    delete window.ContentManager;
+    delete window.CanvasController;
+    delete window.AudioManager;
+    delete window.SiteController;
   }
 })(window);

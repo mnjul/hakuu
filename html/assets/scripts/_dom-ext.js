@@ -8,12 +8,6 @@
 
   Element.prototype.$$ = Element.prototype.querySelectorAll;
 
-  Node.prototype.empty = function () {
-    while (this.firstChild) {
-      this.firstChild.remove();
-    }
-  };
-
   Blob.prototype.asDataURL = function () {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -22,18 +16,14 @@
         () => {
           resolve(reader.result);
         },
-        {
-          once: true,
-        }
+        { once: true }
       );
       reader.addEventListener(
         'error',
         () => {
           reject(reader.error);
         },
-        {
-          once: true,
-        }
+        { once: true }
       );
       reader.readAsDataURL(this);
     });

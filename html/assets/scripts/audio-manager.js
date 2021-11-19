@@ -18,39 +18,38 @@
 
   const AudioContext = window.AudioContext || window.webkitAudioContext;
 
-  let _;
+  exports.AudioManager = class AudioManager {
+    #audioCtx = new AudioContext();
 
-  class AudioManager {
+    #bgmAudioElem;
+    #rainBufferSource;
+    #rainGain;
+    #volumeLavel = 0;
+    #rainMuted = false;
+
+    #bgmAvailablePromise;
+    #rainAvailablePromise;
+
     constructor() {
-      _(this)._audioCtx = new AudioContext();
-
-      _(this)._bgmAudioElem = undefined;
-      _(this)._rainBufferSource = undefined;
-      _(this)._rainGain = undefined;
-      _(this)._volumeLavel = 0;
-      _(this)._rainMuted = false;
-
-      _(this)._bgmAvailablePromise = undefined;
-      _(this)._rainAvailablePromise = undefined;
-      _(this)._load();
+      this.#load();
     }
 
-    _load() {
-      _(this)._setBGMAvailablePromise();
-      _(this)._setRainAvailablePromise();
+    #load() {
+      this.#setBGMAvailablePromise();
+      this.#setRainAvailablePromise();
     }
 
     getAudioAvailablePromise() {
       return Promise.all[
-        (_(this)._bgmAvailablePromise, _(this)._rainAvailablePromise)
+        (this.#bgmAvailablePromise, this.#rainAvailablePromise)
       ];
     }
 
-    _setBGMAvailablePromise() {
-      _(this)._bgmAudioElem = new Audio();
+    #setBGMAvailablePromise() {
+      this.#bgmAudioElem = new Audio();
 
-      _(this)._bgmAvailablePromise = new Promise((resolve, reject) => {
-        _(this)._bgmAudioElem.addEventListener(
+      this.#bgmAvailablePromise = new Promise((resolve, reject) => {
+        this.#bgmAudioElem.addEventListener(
           'canplaythrough',
           () => {
             resolve();
@@ -58,7 +57,7 @@
           { once: true }
         );
 
-        _(this)._bgmAudioElem.addEventListener(
+        this.#bgmAudioElem.addEventListener(
           'error',
           (evt) => {
             reject(evt.error);
@@ -66,28 +65,28 @@
           { once: true }
         );
 
-        _(this)._bgmAudioElem.loop = true;
-        _(this)._bgmAudioElem.src = BGM_FILENAME;
+        this.#bgmAudioElem.loop = true;
+        this.#bgmAudioElem.src = BGM_FILENAME;
       });
     }
 
-    _setRainAvailablePromise() {
-      _(this)._rainGain = _(this)._audioCtx.createGain();
-      _(this)._rainGain.connect(_(this)._audioCtx.destination);
+    #setRainAvailablePromise() {
+      this.#rainGain = this.#audioCtx.createGain();
+      this.#rainGain.connect(this.#audioCtx.destination);
 
-      _(this)._rainBufferSource = _(this)._audioCtx.createBufferSource();
-      _(this)._rainBufferSource.connect(_(this)._rainGain);
-      _(this)._rainBufferSource.loop = true;
+      this.#rainBufferSource = this.#audioCtx.createBufferSource();
+      this.#rainBufferSource.connect(this.#rainGain);
+      this.#rainBufferSource.loop = true;
 
-      _(this)._rainAvailablePromise = fetch(RAIN_FILENAME)
+      this.#rainAvailablePromise = fetch(RAIN_FILENAME)
         .then((resp) => resp.arrayBuffer())
         .then(
           (arrayBuffer) =>
             new Promise((resolve, reject) => {
-              _(this)._audioCtx.decodeAudioData(
+              this.#audioCtx.decodeAudioData(
                 arrayBuffer,
                 (audioBuffer) => {
-                  _(this)._rainBufferSource.buffer = audioBuffer;
+                  this.#rainBufferSource.buffer = audioBuffer;
                   resolve();
                 },
                 (error) => {
@@ -103,56 +102,51 @@
     // we call start() again.
     stop() {
       try {
-        _(this)._bgmAudioElem.pause();
+        this.#bgmAudioElem.pause();
       } catch (e) {
         console.error(e);
       }
 
       try {
-        _(this)._bgmAudioElem.currentTime = 0;
+        this.#bgmAudioElem.currentTime = 0;
       } catch (e) {
         console.error(e);
       }
 
-      _(this)._volumeLavel = 0;
-      _(this)._setRainVolume();
+      this.#volumeLavel = 0;
+      this.#setRainVolume();
     }
 
     playAndSetVolume(volumeLevelStr) {
-      _(this)._bgmAudioElem.play();
+      this.#bgmAudioElem.play();
 
       try {
-        _(this)._rainBufferSource.start();
+        this.#rainBufferSource.start();
       } catch (e) {
         console.error(e);
       }
 
       const volumeLevel = VOL_LEVEL.get(volumeLevelStr);
-      _(this)._volumeLavel = volumeLevel;
+      this.#volumeLavel = volumeLevel;
 
-      _(this)._bgmAudioElem.volume = volumeLevel;
-      _(this)._setRainVolume();
+      this.#bgmAudioElem.volume = volumeLevel;
+      this.#setRainVolume();
     }
 
     muteRain() {
-      _(this)._rainMuted = true;
-      _(this)._setRainVolume();
+      this.#rainMuted = true;
+      this.#setRainVolume();
     }
 
     unmuteRain() {
-      _(this)._rainMuted = false;
-      _(this)._setRainVolume();
+      this.#rainMuted = false;
+      this.#setRainVolume();
     }
 
-    _setRainVolume() {
-      _(this)._rainGain.gain.value = _(this)._rainMuted
+    #setRainVolume() {
+      this.#rainGain.gain.value = this.#rainMuted
         ? 0
-        : _(this)._volumeLavel * RAIN_VOL_MULTIPLIER;
+        : this.#volumeLavel * RAIN_VOL_MULTIPLIER;
     }
-  }
-
-  _ = window.createInternalFunction(AudioManager);
-  if (window.DEBUG) window.internalFunctions[AudioManager] = _;
-
-  exports.AudioManager = AudioManager;
+  };
 })(window);

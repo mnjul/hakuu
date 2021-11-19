@@ -12,7 +12,16 @@
     const f = [e].flatMap(() => e);
     const g = f ?? [];
     let h = undefined;
-    h ??= a.c.matchAll(/^$/g);
+    h ??= b.matchAll(/^$/g);
+    const i = new (class {
+      #i = g;
+      #ii() {
+        return this.#i;
+      }
+      ii() {
+        return this.#ii();
+      }
+    })();
 
     const canvas = document.createElement('canvas');
     if (
@@ -20,12 +29,15 @@
     ) {
       return;
     }
+    if (!canvas.replaceChildren) {
+      return;
+    }
 
     globalThis.clearTimeout(globalThis.esBlockerTimeout);
+    delete globalThis.esBlockerTimeout;
     document.querySelectorAll('.tech-blocker').forEach((elem) => {
-      elem.dataset.b = b;
-      elem.dataset.g = g;
       elem.dataset.h = h;
+      elem.dataset.i = i.ii();
       elem.remove();
     });
   }

@@ -6,10 +6,7 @@
 // Rain-related code heavily modified from http://tympanus.net/codrops/2015/11/04/rain-water-effect-experiments/
 
 (function (exports) {
-  const getScale = (dppx) => (〆.$isSmallView() ? 0.6 : 0.8) * dppx;
-
-  window.R_BRIGHTNESS = 0.96;
-  window.R_ALPHAMULTIPLY = 3;
+  const getScale = (dppx) => (〆.isSmallView() ? 0.6 : 0.8) * dppx;
 
   const isImageBitmapAndWorkerWithOffscreenCanvasSupported =
     window.createImageBitmap &&
@@ -23,8 +20,6 @@
         return false;
       }
     })();
-
-  let _;
 
   const dropAlphaBase64 =
     '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';
@@ -62,31 +57,35 @@
     };
   }
 
-  class RainEngineClient {
-    constructor(viewportCanvas) {
-      _(this)._worker = isImageBitmapAndWorkerWithOffscreenCanvasSupported
-        ? new Worker(
-            URL.createObjectURL(
-              new Blob(['(' + window.rainEngine.toString() + ')()'], {
-                type: 'text/javascript',
-              })
-            )
-          )
-        : getWorkerRunnerShim(window.rainEngine);
+  exports.RainEngineClient = class RainEngineClient {
+    static R_BRIGHTNESS = 0.96;
+    static R_ALPHAMULTIPLY = 3;
 
+    static rainEngine;
+
+    #worker = isImageBitmapAndWorkerWithOffscreenCanvasSupported
+      ? new Worker(
+          URL.createObjectURL(
+            new Blob(['(' + RainEngineClient.rainEngine.toString() + ')()'], {
+              type: 'text/javascript',
+            })
+          )
+        )
+      : getWorkerRunnerShim(RainEngineClient.rainEngine);
+
+    #sentDropImages;
+
+    constructor(viewportCanvas) {
       const offscreenCanvas = isImageBitmapAndWorkerWithOffscreenCanvasSupported
         ? viewportCanvas.transferControlToOffscreen()
         : viewportCanvas;
 
-      _(this)._worker.postMessage(
+      this.#worker.postMessage(
         {
           type: 'init',
           payload: {
             targetCanvas: offscreenCanvas,
-            backgroundColor: 〆.$computedStyle(
-              '#site-root',
-              'background-color'
-            ),
+            backgroundColor: 〆.computedStyle('#site-root', 'background-color'),
             rainDropsConfig: {
               minR: 10,
               maxR: 30,
@@ -111,7 +110,7 @@
           : []
       );
 
-      _(this)._sentDropImages = _(this)._sendDropImagesToWorker();
+      this.#sentDropImages = this.#sendDropImagesToWorker();
     }
 
     async start(width, height, dppx, raining) {
@@ -120,16 +119,16 @@
           if (type === 'started') {
             resolve();
 
-            _(this)._worker.removeEventListener('message', onMessage);
+            this.#worker.removeEventListener('message', onMessage);
           }
         };
 
-        _(this)._worker.addEventListener('message', onMessage);
+        this.#worker.addEventListener('message', onMessage);
       });
 
-      await _(this)._sentDropImages;
+      await this.#sentDropImages;
 
-      _(this)._worker.postMessage({
+      this.#worker.postMessage({
         type: 'start',
         payload: {
           width,
@@ -137,8 +136,8 @@
           scale: getScale(dppx),
           raining,
           rendererConfig: {
-            brightness: window.R_BRIGHTNESS,
-            alphaMultiply: window.R_ALPHAMULTIPLY,
+            brightness: RainEngineClient.R_BRIGHTNESS,
+            alphaMultiply: RainEngineClient.R_ALPHAMULTIPLY,
             alphaSubtract: 0,
             minRefraction: 1,
             maxRefraction: 20,
@@ -150,37 +149,36 @@
     }
 
     destroy() {
-      _(this)._constructedPromise = undefined;
-      _(this)._worker.postMessage({ type: 'destroy' });
+      this.#worker.postMessage({ type: 'destroy' });
     }
 
     updateContent(imageBitmap) {
-      _(this)._worker.postMessage(
+      this.#worker.postMessage(
         { type: 'contentupdate', payload: imageBitmap },
         [imageBitmap]
       );
     }
 
     resize(width, height, dppx) {
-      _(this)._worker.postMessage({
+      this.#worker.postMessage({
         type: 'resize',
         payload: { width, height, scale: getScale(dppx) },
       });
     }
 
-    async _sendDropImagesToWorker() {
+    async #sendDropImagesToWorker() {
       const [dropAlphaImageBitmap, dropColorImageBitmap] = await Promise.all([
-        〆.$convertImageURLToImageBitmap(
+        〆.convertImageURLToImageBitmap(
           `data:image/png;base64,${dropAlphaBase64}`,
-          〆.$convertToImageBitmapIfPossible
+          〆.convertToImageBitmapIfPossible
         ),
-        〆.$convertImageURLToImageBitmap(
+        〆.convertImageURLToImageBitmap(
           `data:image/png;base64,${dropColorBase64}`,
-          〆.$convertToImageBitmapIfPossible
+          〆.convertToImageBitmapIfPossible
         ),
       ]);
 
-      _(this)._worker.postMessage(
+      this.#worker.postMessage(
         {
           type: 'loadDropImages',
           payload: {
@@ -191,13 +189,5 @@
         [dropAlphaImageBitmap, dropColorImageBitmap]
       );
     }
-  }
-
-  _ = window.createInternalFunction(RainEngineClient);
-
-  if (window.DEBUG) {
-    window.internalFunctions[RainEngineClient] = _;
-  }
-
-  exports.RainEngineClient = RainEngineClient;
+  };
 })(window);

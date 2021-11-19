@@ -11,15 +11,15 @@
   const paperBackgroundLightingAzimuth = ~~(Math.random() * 360);
   const paperBackgroundLightingElevation =
     PAPER_BACKGROUND_BASE_ELEVATION *
-    (〆.$isFirefox ? PAPER_BACKGROUND_FIREFOX_ELEVATION_FACTOR : 1);
+    (〆.isFirefox ? PAPER_BACKGROUND_FIREFOX_ELEVATION_FACTOR : 1);
 
-  const paperBackgroundLightingColor = `hsl(${〆.$computedStyle(
+  const paperBackgroundLightingColor = `hsl(${〆.computedStyle(
     'html',
     '--background-hue'
-  )},${〆.$computedStyle(
+  )},${〆.computedStyle('html', '--background-saturation')},${〆.computedStyle(
     'html',
-    '--background-saturation'
-  )},${〆.$computedStyle('html', '--background-lightness')})`;
+    '--background-lightness'
+  )})`;
 
   const PREHENSION_KEYBOARD_ACTIONS = new Map([
     ['ArrowUp', 'prev'],
@@ -35,7 +35,7 @@
         : '';
 
     // inspired by https://tympanus.net/codrops/2019/02/19/svg-filter-effects-creating-texture-with-feturbulence/
-    return 〆.$svgXMLToDataURL(`
+    return 〆.svgXMLToDataURL(`
       <svg xmlns="http://www.w3.org/2000/svg" ${svgDimension}>
         <filter id="paper" x="0" y="0" width="100%" height="100%">
           <feTurbulence type="fractalNoise" baseFrequency="0.03" result="noise" numOctaves="20" />
@@ -59,124 +59,107 @@
 
   const INIT_RAINING = true;
 
-  let _;
-
   // TODO: Streamline state transitions
-  class SiteController {
+  exports.SiteController = class SiteController {
+    #initPageName;
+
+    #canvasController;
+    #contentManager;
+    #audioManager;
+
+    #smallViewSideBarToggleRequestAnimationDirection;
+    #smallViewSideBarToggleRequestAnimationId;
+    #smallViewSideBarToggleBase = $('#small-view-sidebar-toggle-base');
+    #smallViewSideBarToggleFold = $('#small-view-sidebar-toggle-fold');
+    #smallViewSideBarToggleBoxSize = parseInt(
+      $('#small-view-sidebar-toggle > svg')
+        .getAttribute('viewBox')
+        .split(' ')[2]
+    );
+    #smallViewSideBarToggleAnimationStart = 0;
+
     constructor(initPageName, contentManager, canvasController, audioManager) {
-      _(this)._initPageName = initPageName;
+      this.#initPageName = initPageName;
 
-      _(this)._canvasController = canvasController;
-      _(this)._canvasController.onLoadingState = (state) => {
-        _(this)._loading = state;
+      this.#canvasController = canvasController;
+      this.#canvasController.onLoadingState = (state) => {
+        this.#loading = state;
       };
-      _(
-        this
-      )._canvasController.getPaperBackgroundSVGURL = getPaperBackgroundSVGURL;
-      _(this)._contentManager = contentManager;
-      _(this)._audioManager = audioManager;
+      this.#canvasController.getPaperBackgroundSVGURL =
+        getPaperBackgroundSVGURL;
+      this.#contentManager = contentManager;
+      this.#audioManager = audioManager;
 
-      _(this)._smallViewSideBarToggleRequestAnimationId = undefined;
-      _(this)._smallViewSideBarToggleBase = $(
-        '#small-view-sidebar-toggle-base'
-      );
-      _(this)._smallViewSideBarToggleFold = $(
-        '#small-view-sidebar-toggle-fold'
-      );
-      _(this)._smallViewSideBarToggleBoxSize = parseInt(
-        $('#small-view-sidebar-toggle > svg')
-          .getAttribute('viewBox')
-          .split(' ')[2]
-      );
-      _(this)._renderSmallViewSidebarToggle(0);
-      _(this)._smallViewSideBarToggleAnimationStart = 0;
-
-      Object.defineProperty(_(this), '_raining', {
-        get() {
-          return $('#rain-control').dataset.raining === 'true';
-        },
-        set(__raining) {
-          $('#rain-control').dataset.raining = __raining;
-          if (__raining) {
-            this._audioManager.unmuteRain();
-          } else {
-            this._audioManager.muteRain();
-          }
-        },
-      });
-
-      Object.defineProperty(_(this), '_volumeLevel', {
-        get() {
-          return $('#volume-control').dataset.level;
-        },
-        set(__volumeLevel) {
-          $('#volume-control').dataset.level = __volumeLevel;
-        },
-      });
-
-      Object.defineProperty(_(this), '_loading', {
-        set(__loading) {
-          if (__loading) {
-            $('body').classList.add('loading');
-          } else {
-            $('body').classList.remove('loading');
-          }
-        },
-      });
-
-      Object.defineProperty(_(this), '_audioAvailable', {
-        set(__audioAvailable) {
-          if (__audioAvailable) {
-            $('body').classList.add('audio-available');
-          } else {
-            $('body').classList.remove('audio-available');
-          }
-        },
-      });
-
-      Object.defineProperty(_(this), '_currentPage', {
-        set(__currentPage) {
-          $('body').dataset.currentPage = __currentPage;
-          $('#small-view-header-page-title').textContent = $(
-            `#main-menu li[data-page="${__currentPage}"]`
-          ).textContent;
-        },
-      });
+      this.#renderSmallViewSidebarToggle(0);
     }
 
-    _initEventListeners() {
+    get #raining() {
+      return $('#rain-control').dataset.raining === 'true';
+    }
+    set #raining(raining) {
+      $('#rain-control').dataset.raining = raining;
+      if (raining) {
+        this.#audioManager.unmuteRain();
+      } else {
+        this.#audioManager.muteRain();
+      }
+    }
+
+    get #volumeLevel() {
+      return $('#volume-control').dataset.level;
+    }
+    set #volumeLevel(volumeLevel) {
+      $('#volume-control').dataset.level = volumeLevel;
+    }
+
+    set #loading(loading) {
+      $('body').classList.toggle('loading', loading);
+    }
+
+    set #audioAvailable(audioAvailable) {
+      $('body').classList.toggle('audio-available', audioAvailable);
+    }
+
+    set #currentPage(currentPage) {
+      $('body').dataset.currentPage = currentPage;
+      $('#small-view-header-page-title').textContent = $(
+        `#main-menu li[data-page="${currentPage}"]`
+      ).textContent;
+    }
+
+    #initEventListeners() {
       // requestAnimationFrame: sometimes Chrome doesn't have proper
       // getBoundingRect just at DOMContentLoaded
       document.addEventListener('DOMContentLoaded', async () => {
         // waiting for $indexStyleSheet such that $isSmallView is usable
-        await Promise.all([〆.$frame(), 〆.$indexStyleSheet]);
-        _(this)._onReady();
+        await Promise.all([〆.frame(), 〆.indexStyleSheet]);
+        this.#onReady();
       });
 
-      _(this)._setupDevicePixelRatioListener();
+      this.#setupDevicePixelRatioListener();
 
-      window.addEventListener('resize', this.onResize);
-      window.addEventListener('keydown', this.onKeydown);
+      window.addEventListener('resize', this.#onResize);
+      window.addEventListener('keydown', this.#onKeydown);
 
-      $('#main-menu').addEventListener('click', this.onMainMenuClick);
+      $('#main-menu').addEventListener('click', this.#onMainMenuClick);
 
-      $('#rain-control').addEventListener('click', this.onRainMenuClick);
+      $('#rain-control').addEventListener('click', this.#onRainMenuClick);
 
-      $('#volume-control').addEventListener('click', this.onVolumeMenuClick);
+      $('#volume-control').addEventListener('click', this.#onVolumeMenuClick);
 
       $$('.prehension-control').forEach((parent) =>
-        parent.addEventListener('click', this.onPrehensionMenuClick)
+        parent.addEventListener('click', this.#onPrehensionMenuClick)
       );
 
       $('#small-view-sidebar-toggle').addEventListener(
         'click',
-        this.onSmallViewSidebarToggleClick
+        this.#onSmallViewSidebarToggleClick
       );
 
       // hack to trigger mobile safari's :active status
       $('#sidebar').addEventListener('touchstart', () => undefined);
 
-      $('#sidebar').addEventListener('click', this.onSidebarClick);
+      $('#sidebar').addEventListener('click', this.#onSidebarClick);
 
       // disallow scrolling on sidebar and small header
       $$('#sidebar, #small-view-header').forEach((elem) => {
@@ -186,14 +169,14 @@
       });
     }
 
-    _setupDevicePixelRatioListener() {
+    #setupDevicePixelRatioListener() {
       const generateNewQuery = () => {
         matchMedia(
           `(resolution: ${window.devicePixelRatio}dppx)`
         ).addEventListener(
           'change',
           () => {
-            this.onResize();
+            this.#onResize();
             generateNewQuery();
           },
           { once: true }
@@ -202,26 +185,26 @@
       generateNewQuery();
     }
 
-    _onReady() {
-      _(this)._raining = INIT_RAINING;
+    #onReady() {
+      this.#raining = INIT_RAINING;
 
       $(
         '#site-root'
       ).style.backgroundImage = `url('${getPaperBackgroundSVGURL()}')`;
 
-      _(this)._canvasController.ready();
+      this.#canvasController.ready();
 
-      _(this)._canvasController.start();
+      this.#canvasController.start();
 
-      _(this)._switchPage(_(this)._initPageName);
+      this.#switchPage(this.#initPageName);
     }
 
-    onResize = () => {
-      _(this)._canvasController.onResize();
+    #onResize = () => {
+      this.#canvasController.onResize();
 
       // firefox does some caching which makes the old size svg not expanding
       // to new viewport size (if becoming bigger). So adding some tag for that.
-      if (〆.$isFirefox) {
+      if (〆.isFirefox) {
         $(
           '#site-root'
         ).style.backgroundImage = `url('${getPaperBackgroundSVGURL()}%3C!--${
@@ -230,47 +213,47 @@
       }
     };
 
-    onKeydown = (evt) => {
+    #onKeydown = (evt) => {
       if (evt.shiftKey || evt.altKey || evt.ctrlKey || evt.isComposing) return;
 
       const action = PREHENSION_KEYBOARD_ACTIONS.get(evt.key);
       if (!action) return;
 
-      _(this)._canvasController.inPageSwitchView(action);
+      this.#canvasController.inPageSwitchView(action);
       evt.preventDefault();
       evt.stopPropagation();
     };
 
-    onMainMenuClick = (evt) => {
+    #onMainMenuClick = (evt) => {
       if (!(evt.target instanceof HTMLLIElement)) {
         return;
       }
 
       evt.stopPropagation();
 
-      _(this)._switchPage(evt.target.dataset.page);
-      _(this)._toggleSmallViewSidebar(false);
+      this.#switchPage(evt.target.dataset.page);
+      this.#toggleSmallViewSidebar(false);
     };
 
-    onRainMenuClick = (evt) => {
+    #onRainMenuClick = (evt) => {
       evt.stopPropagation();
 
       if (!(evt.target instanceof HTMLSpanElement)) {
         return;
       }
 
-      if (evt.target.id.endsWith('stop') && _(this)._raining) {
-        _(this)._raining = false;
-        _(this)._canvasController.raining = false;
-        _(this)._canvasController.restartRainEngine();
-      } else if (evt.target.id.endsWith('start') && !_(this)._raining) {
-        _(this)._raining = true;
-        _(this)._canvasController.raining = true;
-        _(this)._canvasController.restartRainEngine();
+      if (evt.target.id.endsWith('stop') && this.#raining) {
+        this.#raining = false;
+        this.#canvasController.raining = false;
+        this.#canvasController.restartRainEngine();
+      } else if (evt.target.id.endsWith('start') && !this.#raining) {
+        this.#raining = true;
+        this.#canvasController.raining = true;
+        this.#canvasController.restartRainEngine();
       }
     };
 
-    onVolumeMenuClick = (evt) => {
+    #onVolumeMenuClick = (evt) => {
       evt.stopPropagation();
 
       if (!(evt.target instanceof HTMLSpanElement)) {
@@ -279,16 +262,16 @@
 
       const { level } = evt.target.dataset;
 
-      _(this)._volumeLevel = level;
+      this.#volumeLevel = level;
 
       if (level === 'silent') {
-        _(this)._audioManager.stop();
+        this.#audioManager.stop();
       } else {
-        _(this)._audioManager.playAndSetVolume(level);
+        this.#audioManager.playAndSetVolume(level);
       }
     };
 
-    onPrehensionMenuClick = (evt) => {
+    #onPrehensionMenuClick = (evt) => {
       evt.stopPropagation();
 
       if (!(evt.target instanceof HTMLSpanElement)) {
@@ -297,38 +280,38 @@
 
       const { action } = evt.target.dataset;
 
-      _(this)._canvasController.inPageSwitchView(action);
+      this.#canvasController.inPageSwitchView(action);
     };
 
-    onSidebarClick = () => {
-      _(this)._toggleSmallViewSidebar(false);
+    #onSidebarClick = () => {
+      this.#toggleSmallViewSidebar(false);
     };
 
-    onSmallViewSidebarToggleClick = () => {
-      _(this)._toggleSmallViewSidebar();
+    #onSmallViewSidebarToggleClick = () => {
+      this.#toggleSmallViewSidebar();
     };
 
-    _toggleSmallViewSidebar(state) {
+    #toggleSmallViewSidebar(state) {
       $('body').classList.toggle('small-view-sidebar-visible', state);
-      cancelAnimationFrame(_(this)._smallViewSideBarToggleRequestAnimationId);
+      cancelAnimationFrame(this.#smallViewSideBarToggleRequestAnimationId);
 
-      _(this)._smallViewSideBarToggleRequestAnimationDirection = $(
+      this.#smallViewSideBarToggleRequestAnimationDirection = $(
         'body'
       ).classList.contains('small-view-sidebar-visible')
         ? 'forward'
         : 'backward';
 
-      _(this)._smallViewSideBarToggleAnimationStart = performance.now();
-      _(this)._smallViewSideBarToggleRequestAnimationId = requestAnimationFrame(
+      this.#smallViewSideBarToggleAnimationStart = performance.now();
+      this.#smallViewSideBarToggleRequestAnimationId = requestAnimationFrame(
         this.animateSmallViewSidebarToggle
       );
     }
 
     animateSmallViewSidebarToggle = () => {
       const elapsed =
-        performance.now() - _(this)._smallViewSideBarToggleAnimationStart;
+        performance.now() - this.#smallViewSideBarToggleAnimationStart;
       const totalTime =
-        〆.$computedStyle(
+        〆.computedStyle(
           'html',
           '--small-view-sidebar-transition-duration',
           parseFloat
@@ -343,22 +326,20 @@
       );
 
       const actualPhase =
-        _(this)._smallViewSideBarToggleRequestAnimationDirection === 'forward'
+        this.#smallViewSideBarToggleRequestAnimationDirection === 'forward'
           ? phase
           : 1 - phase;
-      _(this)._renderSmallViewSidebarToggle(actualPhase);
+      this.#renderSmallViewSidebarToggle(actualPhase);
 
       if (phase < 1) {
-        _(
-          this
-        )._smallViewSideBarToggleRequestAnimationId = requestAnimationFrame(
+        this.#smallViewSideBarToggleRequestAnimationId = requestAnimationFrame(
           this.animateSmallViewSidebarToggle
         );
       }
     };
 
-    _renderSmallViewSidebarToggle(phase) {
-      const SIDE = _(this)._smallViewSideBarToggleBoxSize;
+    #renderSmallViewSidebarToggle(phase) {
+      const SIDE = this.#smallViewSideBarToggleBoxSize;
 
       const BORDER_RADIUS_FACTOR = 0.1;
       const FOLDING_FACTOR = 2.5;
@@ -375,7 +356,7 @@
         BORDER_RADIUS +
         (SIDE - BORDER_RADIUS * FOLDING_FACTOR - BORDER_RADIUS) * phase;
 
-      _(this)._smallViewSideBarToggleBase.setAttribute(
+      this.#smallViewSideBarToggleBase.setAttribute(
         'd',
         `
           M 0 ${BORDER_RADIUS}
@@ -392,7 +373,7 @@
         `
       );
 
-      _(this)._smallViewSideBarToggleFold.setAttribute(
+      this.#smallViewSideBarToggleFold.setAttribute(
         'd',
         `
           M ${foldingXInterpolated}, 0
@@ -406,7 +387,7 @@
     }
 
     // eslint-disable-next-line class-methods-use-this
-    _handleFontBlobPromises(fontBlobPromises) {
+    #handleFontBlobPromises(fontBlobPromises) {
       fontBlobPromises.forEach((promise, fontName) => {
         promise.then((blob) => {
           const styleElem = $e('style');
@@ -416,7 +397,7 @@
           styleElem.textContent = `
           @font-face {
             font-family: 'MIH ${fontName.toUpperCase()}';
-            font-weight: ${〆.$computedStyle('body', 'font-weight')};
+            font-weight: ${〆.computedStyle('body', 'font-weight')};
             src: url('${url}') format('woff2');
             font-display: block;
           }
@@ -427,52 +408,45 @@
       });
     }
 
-    async _handleAudioAvailablePromise(audioAvailablePromise) {
+    async #handleAudioAvailablePromise(audioAvailablePromise) {
       await audioAvailablePromise;
 
-      _(this)._audioAvailable = true;
+      this.#audioAvailable = true;
 
       $('#volume-control > span[data-level="silent"]').click();
     }
 
-    async _switchPage(pageName) {
-      _(this)._loading = true;
+    async #switchPage(pageName) {
+      this.#loading = true;
 
-      await _(this)._canvasController.stopPage();
+      await this.#canvasController.stopPage();
 
-      _(this)._currentPage = pageName;
+      this.#currentPage = pageName;
 
-      const pageSourcePromise = _(this)._contentManager.getPageSourcePromise(
-        pageName
-      );
+      const pageSourcePromise =
+        this.#contentManager.getPageSourcePromise(pageName);
 
-      _(this)._canvasController.pageSourcePromise = pageSourcePromise;
+      this.#canvasController.pageSourcePromise = pageSourcePromise;
 
-      _(this)._canvasController.startPage();
+      this.#canvasController.startPage();
     }
 
     init() {
-      _(this)._loading = true;
+      this.#loading = true;
 
-      const fontBlobPromises = _(this)._contentManager.getFontBlobPromises();
-      _(this)._canvasController.fontBlobPromises = fontBlobPromises;
+      const fontBlobPromises = this.#contentManager.getFontBlobPromises();
+      this.#canvasController.fontBlobPromises = fontBlobPromises;
 
-      _(this)._canvasController.pageStyleSheetPromise = _(
-        this
-      )._contentManager.getPageStyleSheetPromise();
+      this.#canvasController.pagesStyleSheetPromise =
+        this.#contentManager.getPagesStyleSheetPromise();
 
-      _(this)._initEventListeners();
+      this.#initEventListeners();
 
-      _(this)._handleFontBlobPromises(fontBlobPromises);
+      this.#handleFontBlobPromises(fontBlobPromises);
 
-      _(this)._handleAudioAvailablePromise(
-        _(this)._audioManager.getAudioAvailablePromise()
+      this.#handleAudioAvailablePromise(
+        this.#audioManager.getAudioAvailablePromise()
       );
     }
-  }
-
-  _ = window.createInternalFunction(SiteController);
-  if (window.DEBUG) window.internalFunctions[SiteController] = _;
-
-  exports.SiteController = SiteController;
+  };
 })(window);

@@ -3,7 +3,9 @@
 
 'use strict';
 
-window.rainEngine = function(messagePort) {
+(function (exports) {
+
+exports.rainEngine = function rainEngine (messagePort) {
 
 messagePort ??= globalThis;
 
@@ -994,3 +996,4 @@ const MESSAGE_HANDLERS = new Map([
 ]);
 
 };
+})(window);

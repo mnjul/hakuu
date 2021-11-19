@@ -15,7 +15,7 @@ detailing the process of making Hakuu.
 
 # Whereas...
 
-## ECMAScript 2021 is served as-is, without transpiling
+## ECMAScript 2022 is served as-is, without transpiling
 
 Of course, I know there are folks still using Internet Explorer, older versions
 of Firefox ESR, iOS or Android, or even Windows Phones, for legitimate or

@@ -8,18 +8,18 @@
   exports.$$ = document.querySelectorAll.bind(document);
   exports.$e = document.createElement.bind(document);
 
-  exports.〆.$frame = () =>
+  exports.〆.frame = () =>
     new Promise((resolve) => {
       requestAnimationFrame(resolve);
     });
-  exports.〆.$time = (time) =>
+  exports.〆.time = (time) =>
     new Promise((resolve) => {
       setTimeout(resolve, time);
     });
 
   const _cachedComputedStyle = new Map();
 
-  exports.〆.$computedStyle = (selector, property, transform) => {
+  exports.〆.computedStyle = (selector, property, transform) => {
     if (!_cachedComputedStyle.has(selector)) {
       _cachedComputedStyle.set(selector, new Map());
     }
@@ -42,7 +42,7 @@
   };
 
   const _fetchCache = new Map();
-  exports.〆.$cachedFetchToDataURL = (src) => {
+  exports.〆.cachedFetchToDataURL = (src) => {
     if (!src.match(/^https?:\/\//)) {
       src = new URL(src, document.baseURI).href;
     }
@@ -77,24 +77,24 @@
       'data:image/webp;base64,UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==';
   });
 
-  exports.〆.$cachedFetchImageToDataURL = async (src) => {
+  exports.〆.cachedFetchImageToDataURL = async (src) => {
     if (await _isWebPSupported) {
       src = src.replace(/\.(jpg|png)$/, '.webp');
     }
-    return 〆.$cachedFetchToDataURL(src);
+    return 〆.cachedFetchToDataURL(src);
   };
 
-  exports.〆.$generateBlankSVGInDataURI = (width, height) =>
-    〆.$svgXMLToDataURL(`
+  exports.〆.generateBlankSVGInDataURI = (width, height) =>
+    〆.svgXMLToDataURL(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
-        <rect width="${width}" height="${height}" fill="${〆.$computedStyle(
+        <rect width="${width}" height="${height}" fill="${〆.computedStyle(
       'html',
       '--empty-image-background'
     )}" />
       </svg>
   `);
 
-  exports.〆.$normalizeDOMRect = (elem) => {
+  exports.〆.normalizeDOMRect = (elem) => {
     const rect = elem.getBoundingClientRect();
     const rootRect = $('#page-root').getBoundingClientRect();
 
@@ -110,11 +110,11 @@
     };
   };
 
-  exports.〆.$indexStyleSheet = (async () => {
+  exports.〆.indexStyleSheet = (async () => {
     let sheet;
 
     do {
-      await 〆.$frame();
+      await 〆.frame();
       sheet = Array.from(document.styleSheets).find(({ href }) =>
         href?.includes('index')
       );
@@ -125,7 +125,7 @@
 
   let SMALL_VIEW_WIDTH_CUTOFF;
 
-  〆.$indexStyleSheet
+  〆.indexStyleSheet
     .then((sheet) => {
       const mediaText = Array.from(sheet.rules).find(({ media }) => !!media)
         .media.mediaText;
@@ -136,7 +136,7 @@
       throw e;
     });
 
-  exports.〆.$isSmallView = () => window.innerWidth <= SMALL_VIEW_WIDTH_CUTOFF;
+  exports.〆.isSmallView = () => window.innerWidth <= SMALL_VIEW_WIDTH_CUTOFF;
 
   const SVG_ESCAPE_CHARS = new Map([
     ['%20', ' '],
@@ -146,7 +146,7 @@
   ]);
 
   // inspired by https://codepen.io/tigt/post/optimizing-svgs-in-data-uris
-  exports.〆.$svgXMLToDataURL = (xmlString) => {
+  exports.〆.svgXMLToDataURL = (xmlString) => {
     xmlString = xmlString.trim().replace(/\s+/g, ' ');
     xmlString = encodeURIComponent(xmlString);
     xmlString = xmlString.replace(/%(?:20|2F|3A|3D)/g, (match) =>
@@ -156,7 +156,7 @@
     return `data:image/svg+xml,${xmlString}`;
   };
 
-  exports.〆.$convertImageURLToImageBitmap = (url, converter) =>
+  exports.〆.convertImageURLToImageBitmap = (url, converter) =>
     new Promise((resolve, reject) => {
       let img = new Image();
       img.src = url;
@@ -179,14 +179,14 @@
       img.addEventListener('load', loadHandler, { once: true });
     });
 
-  exports.〆.$convertToImageBitmapIfPossible = (img) => {
+  exports.〆.convertToImageBitmapIfPossible = (img) => {
     if (window.createImageBitmap) return createImageBitmap(img);
     else return img;
   };
 
   let CAN_USE_CREATE_IMAGE_BITMAP_WITH_SVG_FOREIGN_OBJECT = false;
 
-  exports.〆.$convertSvgImageToImageBitmapIfPossible = (img) => {
+  exports.〆.convertSvgImageToImageBitmapIfPossible = (img) => {
     if (CAN_USE_CREATE_IMAGE_BITMAP_WITH_SVG_FOREIGN_OBJECT) {
       // if createImageBitmap fails, return the img (firefox fails if the svg is too large)
       return createImageBitmap(img).catch(() => img);
@@ -196,6 +196,7 @@
 
   CAN_USE_CREATE_IMAGE_BITMAP_WITH_SVG_FOREIGN_OBJECT =
     window.createImageBitmap &&
+    !〆.isSafari15 && // Safari 15 actually can't canvas-render the image if it's too large, not sure why
     (await new Promise((resolve, reject) => {
       const img = new Image();
 
@@ -217,7 +218,7 @@
 
       img.addEventListener('error', reject);
 
-      img.src = 〆.$svgXMLToDataURL(`
+      img.src = 〆.svgXMLToDataURL(`
         <svg xmlns="http://www.w3.org/2000/svg" height="10" width="10">
           <foreignObject></foreignObject>
         </svg>

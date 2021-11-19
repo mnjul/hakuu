@@ -120,7 +120,6 @@ func buildIndexJs() {
 	}
 
 	dstIndexJs = ensureDebugFalse(dstIndexJs)
-	dstIndexJs = removeMarkedJs(dstIndexJs)
 
 	fmt.Println("> Writing concatenated index.js...")
 	writeFile(path.Join(ScriptsDirName, "index.js"), dstIndexJs)
@@ -253,12 +252,6 @@ func minifyIndexJs(dstPath string) {
 		"-o", fileName,
 		fileName)
 	runAndCheckCmd(cmd)
-}
-
-func removeMarkedJs(content string) string {
-	markRegex := regexp.MustCompile(`(?s)/\*<BUILD_REMOVAL>\*/.*?/\*</BUILD_REMOVAL>\*/`)
-
-	return markRegex.ReplaceAllString(content, "")
 }
 
 func ensureDebugFalse(content string) string {

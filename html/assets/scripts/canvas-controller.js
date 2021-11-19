@@ -11,200 +11,190 @@
   const INNER_PAGE_SCROLL_SPEED_ALPHA = 5;
   const INNER_PAGE_SCROLL_SPEED_DELTA = 20;
 
-  let _;
+  exports.CanvasController = class CanvasController {
+    static RainEngineClientClass;
 
-  class CanvasController {
-    constructor(RainEngineClientClass) {
-      _(this)._main = undefined;
-      _(this)._viewport = undefined;
-      _(this)._pageHolder = undefined;
+    #main;
+    #viewport;
+    #pageHolder;
 
-      _(this)._fontBlobPromises = undefined;
-      _(this)._pagesStyleSheetPromise = undefined;
-      _(this)._pageSourcePromise = undefined;
+    #fontBlobPromises;
+    #pagesStyleSheetPromise;
+    #pageSourcePromise;
 
-      _(this)._page = undefined;
-      _(this)._lastWidthDots = undefined;
-      _(this)._lastHeightDots = undefined;
+    #page;
+    #lastWidthDots;
+    #lastHeightDots;
 
-      _(this)._dppx = undefined;
+    #dppx;
 
-      _(this)._scrollRequestAnimationFrameId = undefined;
+    #scrollRequestAnimationFrameId;
 
-      _(this)._currentAbortController = new AbortController();
+    #currentAbortController = new AbortController();
 
-      _(this)._currentScrollOffsetDots = 0;
+    #currentScrollOffsetDots = 0;
 
-      _(this)._mainOffsetForPaperBackground = 0;
+    #mainOffsetForPaperBackground = 0;
 
-      _(this)._fullPageBitmap = undefined;
-      _(this)._viewportPageCanvas = $e('canvas');
-      _(this)._RainEngineClientClass = RainEngineClientClass;
-      _(this)._rainEngineClient = undefined;
+    #fullPageBitmap;
+    #viewportPageCanvas = $e('canvas');
 
-      _(this)._paperBackgroundPromise = Promise.resolve(new Image());
+    #rainEngineClient;
 
-      // eslint-disable-next-line no-empty-function
-      this.onLoadingState = () => {};
-      // eslint-disable-next-line no-empty-function
-      this.getPaperBackgroundSVGURL = () => {};
+    #paperBackgroundPromise = Promise.resolve(new Image());
 
-      this.raining = true;
+    onLoadingState = () => {};
+    getPaperBackgroundSVGURL = () => {};
 
-      Object.defineProperty(_(this), '_rasterizationWidthDots', {
-        get() {
-          return this._pageHolder.getBoundingClientRect().width * this._dppx;
-        },
-      });
+    raining = true;
 
-      Object.defineProperty(_(this), '_rasterizationHeightDots', {
-        get() {
-          return this._viewportPageCanvas.height;
-        },
-      });
+    get #rasterizationWidthDots() {
+      return this.#pageHolder.getBoundingClientRect().width * this.#dppx;
+    }
+
+    get #rasterizationHeightDots() {
+      return this.#viewportPageCanvas.height;
     }
 
     ready() {
-      _(this)._main = $('#main');
-      _(this)._viewport = $('#viewport');
-      _(this)._pageHolder = $('#page-holder');
+      this.#main = $('#main');
+      this.#viewport = $('#viewport');
+      this.#pageHolder = $('#page-holder');
 
-      _(this)._rainEngineClient = new (_(this)._RainEngineClientClass)(
-        _(this)._viewport
+      this.#rainEngineClient = new CanvasController.RainEngineClientClass(
+        this.#viewport
       );
     }
 
     start() {
       this.onResize();
-      _(this)._startRainEngine();
+      this.#startRainEngine();
     }
 
     async onResize() {
       const dppx = window.devicePixelRatio;
-      _(this)._dppx = dppx;
+      this.#dppx = dppx;
 
-      _(this)._mainOffsetForPaperBackground = _(
-        this
-      )._main.getBoundingClientRect().left;
+      this.#mainOffsetForPaperBackground =
+        this.#main.getBoundingClientRect().left;
 
-      _(this)._setCanvasSize();
+      this.#setCanvasSize();
 
-      _(this)._preparePagePaperBackground();
+      this.#preparePagePaperBackground();
 
-      if (_(this)._rasterizationHeightDots !== _(this)._lastHeightDots) {
-        _(this)._page?.requestResizeHRasterization(
-          _(this)._rasterizationHeightDots,
-          _(this)._dppx
+      if (this.#rasterizationHeightDots !== this.#lastHeightDots) {
+        this.#page?.requestResizeHRasterization(
+          this.#rasterizationHeightDots,
+          this.#dppx
         );
-        _(this)._lastHeightDots = _(this)._rasterizationHeightDots;
+        this.#lastHeightDots = this.#rasterizationHeightDots;
       }
 
-      if (_(this)._rasterizationWidthDots !== _(this)._lastWidthDots) {
-        _(this)._page?.requestResizeWRasterization(
-          _(this)._rasterizationWidthDots,
-          _(this)._dppx
+      if (this.#rasterizationWidthDots !== this.#lastWidthDots) {
+        this.#page?.requestResizeWRasterization(
+          this.#rasterizationWidthDots,
+          this.#dppx
         );
-        _(this)._lastWidthDots = _(this)._rasterizationWidthDots;
+        this.#lastWidthDots = this.#rasterizationWidthDots;
       }
     }
 
     async stopPage() {
-      _(this)._currentAbortController.abort();
+      this.#currentAbortController.abort();
 
-      _(this)._detachEvents();
-      clearInterval(_(this)._scrollRequestAnimationFrameId);
+      this.#detachEvents();
+      clearInterval(this.#scrollRequestAnimationFrameId);
 
-      await _(this)._renderPagePaperBackground();
+      await this.#renderPagePaperBackground();
 
-      _(this)._updateRainEngineContent();
+      this.#updateRainEngineContent();
 
-      document.documentElement.scrollTop = _(this)._currentScrollOffsetDots = 0;
+      document.documentElement.scrollTop = this.#currentScrollOffsetDots = 0;
     }
 
     async startPage() {
-      _(this)._currentAbortController = new AbortController();
-      const thisAbortSignal = _(this)._currentAbortController.signal;
+      this.#currentAbortController = new AbortController();
+      const thisAbortSignal = this.#currentAbortController.signal;
 
-      await _(this)._deserializePage(thisAbortSignal, _(this)._dppx);
+      await this.#deserializePage(thisAbortSignal, this.#dppx);
 
       if (thisAbortSignal.aborted) {
         return;
       }
 
-      _(this)._attachEvents();
+      this.#attachEvents();
 
-      _(this)._receiveActualPageBitmaps(thisAbortSignal);
+      this.#receiveActualPageBitmaps(thisAbortSignal);
     }
 
-    _startRainEngine() {
-      return _(this)._rainEngineClient.start(
-        _(this)._viewportPageCanvas.width,
-        _(this)._viewportPageCanvas.height,
-        _(this)._dppx,
+    #startRainEngine() {
+      return this.#rainEngineClient.start(
+        this.#viewportPageCanvas.width,
+        this.#viewportPageCanvas.height,
+        this.#dppx,
         this.raining
       );
     }
 
-    _destroyRainEngine() {
-      _(this)._rainEngineClient?.destroy();
+    #destroyRainEngine() {
+      this.#rainEngineClient?.destroy();
     }
 
     async restartRainEngine() {
-      _(this)._destroyRainEngine();
-      await _(this)._startRainEngine();
+      this.#destroyRainEngine();
+      await this.#startRainEngine();
 
-      _(this)._updateRainEngineContent();
+      this.#updateRainEngineContent();
     }
 
     set pageSourcePromise(pageSourcePromise) {
-      _(this)._pageSourcePromise = pageSourcePromise;
+      this.#pageSourcePromise = pageSourcePromise;
     }
 
     set fontBlobPromises(fontBlobPromises) {
-      _(this)._fontBlobPromises = fontBlobPromises;
+      this.#fontBlobPromises = fontBlobPromises;
     }
 
-    set pageStyleSheetPromise(styleSheetPromise) {
-      _(this)._pageStyleSheetPromise = styleSheetPromise;
+    set pagesStyleSheetPromise(styleSheetPromise) {
+      this.#pagesStyleSheetPromise = styleSheetPromise;
     }
 
     inPageSwitchView(action) {
-      _(this)._page.switchView(action);
+      this.#page.switchView(action);
     }
 
-    _setCanvasSize() {
+    #setCanvasSize() {
       const dppx = window.devicePixelRatio;
 
-      const width = _(this)._main.getBoundingClientRect().width * dppx;
+      const width = this.#main.getBoundingClientRect().width * dppx;
       const height = window.innerHeight * dppx;
 
-      _(this)._rainEngineClient.resize(width, height, dppx);
+      this.#rainEngineClient.resize(width, height, dppx);
 
-      _(this)._viewportPageCanvas.width = width;
-      _(this)._viewportPageCanvas.height = height;
+      this.#viewportPageCanvas.width = width;
+      this.#viewportPageCanvas.height = height;
     }
 
-    async _renderViewportPageCanvas() {
-      await _(this)._renderPagePaperBackground();
-      const canvasCtx = _(this)._viewportPageCanvas.getContext('2d', {
+    async #renderViewportPageCanvas() {
+      await this.#renderPagePaperBackground();
+      const canvasCtx = this.#viewportPageCanvas.getContext('2d', {
         alpha: false,
       });
-      const { width: widthDots, height: canvasHeightDots } = _(
-        this
-      )._viewportPageCanvas;
+      const { width: widthDots, height: canvasHeightDots } =
+        this.#viewportPageCanvas;
 
       const drawingHeightDots = Math.min(
-        _(this)._page.contentHeightDots,
+        this.#page.contentHeightDots,
         canvasHeightDots
       );
 
       // - 1 to get around with chrome's mysterious 1px black line at the bottom
 
-      if (_(this)._currentScrollOffsetDots >= 0) {
+      if (this.#currentScrollOffsetDots >= 0) {
         canvasCtx.drawImage(
-          _(this)._fullPageBitmap,
+          this.#fullPageBitmap,
           0,
-          _(this)._currentScrollOffsetDots,
+          this.#currentScrollOffsetDots,
           widthDots,
           drawingHeightDots - 1,
           0,
@@ -214,31 +204,31 @@
         );
       } else {
         canvasCtx.drawImage(
-          _(this)._fullPageBitmap,
+          this.#fullPageBitmap,
           0,
           0,
           widthDots,
-          drawingHeightDots + _(this)._currentScrollOffsetDots - 1,
+          drawingHeightDots + this.#currentScrollOffsetDots - 1,
           0,
-          -_(this)._currentScrollOffsetDots,
+          -this.#currentScrollOffsetDots,
           widthDots,
-          drawingHeightDots + _(this)._currentScrollOffsetDots
+          drawingHeightDots + this.#currentScrollOffsetDots
         );
       }
     }
 
-    async _renderPagePaperBackground() {
-      const canvasCtx = _(this)._viewportPageCanvas.getContext('2d', {
+    async #renderPagePaperBackground() {
+      const canvasCtx = this.#viewportPageCanvas.getContext('2d', {
         alpha: false,
       });
 
-      const paperBackground = await _(this)._paperBackgroundPromise;
+      const paperBackground = await this.#paperBackgroundPromise;
 
-      const { width, height } = _(this)._viewportPageCanvas;
+      const { width, height } = this.#viewportPageCanvas;
 
       canvasCtx.drawImage(
         paperBackground,
-        _(this)._mainOffsetForPaperBackground,
+        this.#mainOffsetForPaperBackground,
         0,
         paperBackground.width,
         paperBackground.height,
@@ -249,8 +239,8 @@
       );
     }
 
-    _preparePagePaperBackground() {
-      _(this)._paperBackgroundPromise = new Promise((resolve, reject) => {
+    #preparePagePaperBackground() {
+      this.#paperBackgroundPromise = new Promise((resolve, reject) => {
         const img = new Image();
 
         img.addEventListener('error', reject, { once: true });
@@ -264,17 +254,17 @@
 
         // these dimensions are in logic pixels because svgs don't have that scaling concept when rendered onto a canvas
         const width = window.innerWidth;
-        const height = _(this)._rasterizationHeightDots / _(this)._dppx;
+        const height = this.#rasterizationHeightDots / this.#dppx;
         img.src = this.getPaperBackgroundSVGURL(width, height);
 
-        img.width = width - _(this)._mainOffsetForPaperBackground;
+        img.width = width - this.#mainOffsetForPaperBackground;
         img.height = height;
       });
     }
 
-    async _deserializePage(abortSignal, dppx) {
+    async #deserializePage(abortSignal, dppx) {
       const fontDataURLArray = await Promise.all(
-        Array.from(_(this)._fontBlobPromises.values()).map((promise) =>
+        Array.from(this.#fontBlobPromises.values()).map((promise) =>
           promise.then((blob) => blob.asDataURL())
         )
       );
@@ -283,32 +273,32 @@
         return;
       }
 
-      const styleSheet = await _(this)._pageStyleSheetPromise;
+      const styleSheet = await this.#pagesStyleSheetPromise;
 
       if (abortSignal.aborted) {
         return;
       }
 
       const fontDataURLs = new Map(
-        Array.from(_(this)._fontBlobPromises.keys()).map((fontName, idx) => [
+        Array.from(this.#fontBlobPromises.keys()).map((fontName, idx) => [
           fontName,
           fontDataURLArray[idx],
         ])
       );
 
-      const pageSource = await _(this)._pageSourcePromise;
+      const pageSource = await this.#pageSourcePromise;
 
       if (abortSignal.aborted) {
         return;
       }
 
-      _(this)._page = pageSource.deserialize(
+      this.#page = pageSource.deserialize(
         styleSheet,
         fontDataURLs,
         {
           dppx,
-          widthDots: _(this)._rasterizationWidthDots,
-          heightDots: _(this)._rasterizationHeightDots,
+          widthDots: this.#rasterizationWidthDots,
+          heightDots: this.#rasterizationHeightDots,
         },
         abortSignal,
         (loading) => {
@@ -316,41 +306,41 @@
         }
       );
 
-      _(this)._page.addEventListener('click', this.onPageClick);
+      this.#page.addEventListener('click', this.#onPageClick);
     }
 
-    async _receiveActualPageBitmaps(abortSignal) {
-      const page = _(this)._page;
+    async #receiveActualPageBitmaps(abortSignal) {
+      const page = this.#page;
       for await (const bitmap of page.actualImagesGenerator()) {
         if (abortSignal.aborted) {
           break;
         }
 
-        _(this)._main.style.height = `${
-          _(this)._page.contentHeightDots / _(this)._dppx
+        this.#main.style.height = `${
+          this.#page.contentHeightDots / this.#dppx
         }px`;
 
-        _(this)._fullPageBitmap = bitmap;
-        await _(this)._renderViewportPageCanvas();
-        _(this)._updateRainEngineContent();
+        this.#fullPageBitmap = bitmap;
+        await this.#renderViewportPageCanvas();
+        this.#updateRainEngineContent();
       }
     }
 
-    async _updateRainEngineContent() {
-      _(this)._rainEngineClient.updateContent(
-        await 〆.$convertToImageBitmapIfPossible(_(this)._viewportPageCanvas)
+    async #updateRainEngineContent() {
+      this.#rainEngineClient.updateContent(
+        await 〆.convertToImageBitmapIfPossible(this.#viewportPageCanvas)
       );
     }
 
-    _attachEvents() {
-      window.addEventListener('scroll', this.onScroll);
+    #attachEvents() {
+      window.addEventListener('scroll', this.#onScroll);
     }
 
-    _detachEvents() {
-      window.removeEventListener('scroll', this.onScroll);
+    #detachEvents() {
+      window.removeEventListener('scroll', this.#onScroll);
     }
 
-    onPageClick = (evt) => {
+    #onPageClick = (evt) => {
       const { target } = evt;
 
       if (
@@ -359,8 +349,8 @@
       ) {
         let margin = INNER_PAGE_SCROLL_TOP_MARGIN;
 
-        if (〆.$isSmallView()) {
-          margin += 〆.$computedStyle(
+        if (〆.isSmallView()) {
+          margin += 〆.computedStyle(
             'html',
             '--small-view-header-height',
             parseFloat
@@ -369,29 +359,29 @@
 
         const targetSelector = target.href.substr(target.href.indexOf('#'));
 
-        _(this)._smoothScrollTop(
-          〆.$normalizeDOMRect($(targetSelector)).top - margin
+        this.#smoothScrollTop(
+          〆.normalizeDOMRect($(targetSelector)).top - margin
         );
 
         evt.preventDefault();
       }
     };
 
-    onScroll = async () => {
+    #onScroll = async () => {
       const dppx = window.devicePixelRatio;
 
       const newOffset = document.documentElement.scrollTop * dppx;
 
-      if (_(this)._currentScrollOffsetDots === newOffset) return;
-      _(this)._currentScrollOffsetDots = newOffset;
+      if (this.#currentScrollOffsetDots === newOffset) return;
+      this.#currentScrollOffsetDots = newOffset;
 
-      await _(this)._renderViewportPageCanvas();
-      _(this)._updateRainEngineContent();
+      await this.#renderViewportPageCanvas();
+      this.#updateRainEngineContent();
     };
 
     // Safari (macOS / iOS) doesn't support scrollTo behavior: smooth, so impl'ing it ourselves
-    _smoothScrollTop(targetTop) {
-      cancelAnimationFrame(_(this)._scrollRequestAnimationFrameId);
+    #smoothScrollTop(targetTop) {
+      cancelAnimationFrame(this.#scrollRequestAnimationFrameId);
 
       let currentPass = 0;
 
@@ -422,14 +412,7 @@
         }
       };
 
-      _(this)._scrollRequestAnimationFrameId = requestAnimationFrame(
-        scrollPass
-      );
+      this.#scrollRequestAnimationFrameId = requestAnimationFrame(scrollPass);
     }
-  }
-
-  _ = window.createInternalFunction(CanvasController);
-  if (window.DEBUG) window.internalFunctions[CanvasController] = _;
-
-  exports.CanvasController = CanvasController;
+  };
 })(window);

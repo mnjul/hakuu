@@ -8,12 +8,15 @@
 
   exports.〆 = {};
 
-  Object.defineProperty(exports.〆, '$REM_SCALE', {
+  Object.defineProperty(exports.〆, 'REM_SCALE', {
     get() {
-      return 〆.$computedStyle('html', 'font-size', parseFloat);
+      return 〆.computedStyle('html', 'font-size', parseFloat);
     },
   });
 
-  // :(. See individual usage.
-  exports.〆.$isFirefox = navigator.userAgent.includes('Firefox');
+  // :(. See individual usages.
+  exports.〆.isFirefox = navigator.userAgent.includes('Firefox');
+  exports.〆.isSafari15 = !!navigator.userAgent.match(
+    /Version\/15\.\S+ Safari\//
+  );
 })(window);
