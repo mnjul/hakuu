@@ -27,17 +27,47 @@
         position: absolute;
         top: 0;
         left: 0;
-        bottom: 0;
-        right: 0;
 
         margin: 0;
 
-        --image-width: 65%;
         font-size: 0.15rem;
       }
 
-      .prehension.page-small figure {
+      .prehension:not(.page-small) figure,
+      .prehension.page-small figure:not(.horizontal) {
+        bottom: 0;
+        right: 0;
+      }
+
+      .prehension figure:not(.horizontal) {
+        --image-width: 65%;
+        --image-height: var(--height);
+      }
+
+      .prehension figure.horizontal {
+        --image-top: 10%;
+        --image-left: var(--padding-horizontal);
+      }
+
+      .prehension:not(.page-small) figure.horizontal {
+        --image-width: calc(100% - var(--image-left));
+        --image-height: 42%;
+      }
+
+      .prehension.page-small figure:not(.horizontal) {
+        --image-width: var(--width);
         --image-height: 65%;
+      }
+
+      .prehension.page-small figure.horizontal {
+        width: 100vh;
+        height: 100vw;
+
+        --image-width: calc(100vh - var(--small-view-header-height));
+        --image-height: 60vw;
+
+        transform: rotate(90deg) translateY(-100vw);
+        transform-origin: 0 0;
       }
 
       .prehension figcaption {
@@ -49,17 +79,29 @@
         line-height: 1.35;
       }
 
-      .prehension:not(.page-small) figcaption {
+      .prehension:not(.page-small) figure:not(.horizontal) figcaption {
         bottom: 15%;
         right: calc(var(--image-width) + 1.5em);
         left: 10%;
         padding-left: 1.5em;
       }
 
-      .prehension.page-small figcaption {
+      .prehension:not(.page-small) figure.horizontal figcaption {
+        top: calc(var(--image-top) + var(--image-height) + 1em);
+        left: calc(var(--image-left) + 3em);
+        width: 40%;
+      }
+
+      .prehension.page-small figure:not(.horizontal) figcaption {
         bottom: calc(var(--image-height) + 1.5em);
         padding: 0 var(--padding-horizontal);
         width: 100%;
+      }
+
+      .prehension.page-small figure.horizontal figcaption {
+        left: calc(var(--small-view-header-height) + 3em);
+        bottom: calc(var(--image-height) + 1.5em);
+        width: 60%;
       }
 
       .prehension figcaption p {
@@ -70,8 +112,12 @@
         margin-bottom: 2em;
       }
 
-      .prehension:not(.page-small) figcaption p {
+      .prehension:not(.page-small) figure:not(.horizontal) figcaption p {
         text-align: right;
+      }
+
+      .prehension:not(.page-small) figure.horizontal figcaption p {
+        text-align: left;
       }
 
       .prehension.page-small figcaption p {
@@ -86,17 +132,23 @@
         position: absolute;
         object-fit: cover;
 
-        bottom: 0;
         right: 0;
       }
 
-      .prehension:not(.page-small) img {
-        width: var(--image-width);
-        height: var(--height);
+      .prehension figure:not(.horizontal) img {
+        bottom: 0;
       }
 
-      .prehension.page-small img {
-        width: var(--width);
+      .prehension.page-small figure.horizontal img {
+        bottom: 0;
+      }
+
+      .prehension:not(.page-small) figure.horizontal img {
+        top: var(--image-top);
+      }
+
+      .prehension img {
+        width: var(--image-width);
         height: var(--image-height);
       }
       /*]]>*/
@@ -109,21 +161,21 @@
           <p>脙兀俬徖惉跠屮僤卬玊。粡冞艼縋暋鮂忕一堛酓珚沝帄侲兀。</p>
           <p class="meta"><span>9408</span><span>唴一卼莌聐</span></p>
         </figcaption>
-        <img src="assets/images/prehension/1.jpg" />
+        <img src="assets/images/prehension/1.avif" />
       </figure>
       <figure>
         <figcaption>
           <p>夃窌炔笢玵醾鉞颬朳忕屌抎狋阽狃晸乇泐慁嵬。</p>
           <p class="meta"><span>1359</span><span>抏葀乇苀慓</span></p>
         </figcaption>
-        <img src="assets/images/prehension/2.jpg" />
+        <img src="assets/images/prehension/2.avif" />
       </figure>
       <figure>
         <figcaption>
           <p>屮箜燖毌，珵乇洝埏湦毻丌嗺卬仡。</p>
           <p class="meta"><span>6107</span><span>爿浣 eget arcu 矸婛</span></p>
         </figcaption>
-        <img src="assets/images/prehension/3.jpg" />
+        <img src="assets/images/prehension/3.avif" />
       </figure>
       <figure>
         <figcaption lang="en">
@@ -132,23 +184,23 @@
             ><span>3642</span><span>Volutpat ac tincidunt</span></p
           >
         </figcaption>
-        <img src="assets/images/prehension/4.jpg" />
+        <img src="assets/images/prehension/4.avif" />
       </figure>
-      <figure>
+      <figure class="horizontal">
         <figcaption lang="en">
           <p>Nulla facilisi cras fermentum odio eu.</p>
           <p class="meta"
             ><span>6071</span><span>Nulla facilisi etiam dignissim</span></p
           >
         </figcaption>
-        <img src="assets/images/prehension/5.jpg" />
+        <img src="assets/images/prehension/5.avif" />
       </figure>
       <figure>
         <figcaption lang="ja">
           <p>碙丌畽徻圠、埳丌姴湴晼嗄丌嫙卬仨。</p>
           <p class="meta"><span>4925</span><span>幵錞鈱</span></p>
         </figcaption>
-        <img src="assets/images/prehension/6.jpg" />
+        <img src="assets/images/prehension/6.avif" />
       </figure>
     </div>
   </body>

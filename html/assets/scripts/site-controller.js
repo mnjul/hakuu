@@ -4,23 +4,6 @@
 'use strict';
 
 (function (exports) {
-  const PAPER_BACKGROUND_BASE_ELEVATION = 54;
-  // firefox's distantlight is darker than other browsers.
-  const PAPER_BACKGROUND_FIREFOX_ELEVATION_FACTOR = 1.25;
-
-  const paperBackgroundLightingAzimuth = ~~(Math.random() * 360);
-  const paperBackgroundLightingElevation =
-    PAPER_BACKGROUND_BASE_ELEVATION *
-    (〆.isFirefox ? PAPER_BACKGROUND_FIREFOX_ELEVATION_FACTOR : 1);
-
-  const paperBackgroundLightingColor = `hsl(${〆.computedStyle(
-    'html',
-    '--background-hue'
-  )},${〆.computedStyle('html', '--background-saturation')},${〆.computedStyle(
-    'html',
-    '--background-lightness'
-  )})`;
-
   const PREHENSION_KEYBOARD_ACTIONS = new Map([
     ['ArrowUp', 'prev'],
     ['ArrowLeft', 'prev'],
@@ -28,24 +11,8 @@
     ['ArrowRight', 'next'],
   ]);
 
-  function getPaperBackgroundSVGURL(width, height) {
-    const svgDimension =
-      width && height
-        ? `width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"`
-        : '';
-
-    // inspired by https://tympanus.net/codrops/2019/02/19/svg-filter-effects-creating-texture-with-feturbulence/
-    return 〆.svgXMLToDataURL(`
-      <svg xmlns="http://www.w3.org/2000/svg" ${svgDimension}>
-        <filter id="paper" x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.03" result="noise" numOctaves="20" />
-          <feDiffuseLighting in="noise" lighting-color="${paperBackgroundLightingColor}" surfaceScale="1">
-            <feDistantLight azimuth="${paperBackgroundLightingAzimuth}" elevation="${paperBackgroundLightingElevation}" />
-          </feDiffuseLighting>
-        </filter>
-        <rect x="0" y="0" width="100%" height="100%" filter="url(#paper)" fill="none" />
-      </svg>
-    `);
+  function getPaperBackgroundSVGURL() {
+    return 〆.svgXMLToDataURL($('#paper-background').outerHTML);
   }
 
   function cubicBézier(t, p0, p1, p2, p3) {
@@ -85,8 +52,11 @@
       this.#canvasController.onLoadingState = (state) => {
         this.#loading = state;
       };
-      this.#canvasController.getPaperBackgroundSVGURL =
-        getPaperBackgroundSVGURL;
+      this.#canvasController.getPaperBackgroundSVGURL = () => {
+        this.#updateBackgroundDimension();
+        return getPaperBackgroundSVGURL();
+      };
+
       this.#contentManager = contentManager;
       this.#audioManager = audioManager;
 
@@ -188,9 +158,8 @@
     #onReady() {
       this.#raining = INIT_RAINING;
 
-      $(
-        '#site-root'
-      ).style.backgroundImage = `url('${getPaperBackgroundSVGURL()}')`;
+      this.#initBackgroundPaperParams();
+      this.#updateBackgroundDimension();
 
       this.#canvasController.ready();
 
@@ -202,15 +171,7 @@
     #onResize = () => {
       this.#canvasController.onResize();
 
-      // firefox does some caching which makes the old size svg not expanding
-      // to new viewport size (if becoming bigger). So adding some tag for that.
-      if (〆.isFirefox) {
-        $(
-          '#site-root'
-        ).style.backgroundImage = `url('${getPaperBackgroundSVGURL()}%3C!--${
-          window.innerWidth
-        }-${window.innerHeight}--%3E')`;
-      }
+      this.#updateBackgroundDimension();
     };
 
     #onKeydown = (evt) => {
@@ -384,6 +345,39 @@
           z
           `
       );
+    }
+
+    // paper background inspired by https://tympanus.net/codrops/2019/02/19/svg-filter-effects-creating-texture-with-feturbulence/
+    #initBackgroundPaperParams() {
+      const lightingAzimuth = ~~(Math.random() * 360);
+
+      const lightingColor = `hsl(${〆.computedStyle(
+        '#site-root',
+        '--background-hue'
+      )},${〆.computedStyle(
+        '#site-root',
+        '--background-saturation'
+      )},${〆.computedStyle('#site-root', '--background-lightness')})`;
+
+      // chrome needs a fill for the svg to work as img.src (probably due to optimization)
+      const fillColor = 〆.computedStyle('#site-root', 'background-color');
+
+      $('#paper-background feDiffuseLighting').setAttribute(
+        'lighting-color',
+        lightingColor
+      );
+
+      $('#paper-background feDistantLight').setAttribute(
+        'azimuth',
+        lightingAzimuth
+      );
+
+      $('#paper-background rect').setAttribute('fill', fillColor);
+    }
+
+    #updateBackgroundDimension() {
+      $('#paper-background').setAttribute('width', window.innerWidth);
+      $('#paper-background').setAttribute('height', window.innerHeight);
     }
 
     // eslint-disable-next-line class-methods-use-this

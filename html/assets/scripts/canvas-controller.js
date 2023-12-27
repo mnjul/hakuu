@@ -255,7 +255,7 @@
         // these dimensions are in logic pixels because svgs don't have that scaling concept when rendered onto a canvas
         const width = window.innerWidth;
         const height = this.#rasterizationHeightDots / this.#dppx;
-        img.src = this.getPaperBackgroundSVGURL(width, height);
+        img.src = this.getPaperBackgroundSVGURL();
 
         img.width = width - this.#mainOffsetForPaperBackground;
         img.height = height;
@@ -328,7 +328,7 @@
 
     async #updateRainEngineContent() {
       this.#rainEngineClient.updateContent(
-        await 〆.convertToImageBitmapIfPossible(this.#viewportPageCanvas)
+        await createImageBitmap(this.#viewportPageCanvas)
       );
     }
 

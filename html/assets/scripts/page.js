@@ -172,7 +172,7 @@
       #fetchContentImagesInBackgorund() {
         const imgElems = this.#doc.$$('img');
         imgElems.forEach((elem) =>
-          〆.cachedFetchImageToDataURL(elem.dataset.originalSrc)
+          〆.cachedFetchToDataURL(elem.dataset.originalSrc)
         );
       }
 
@@ -206,7 +206,7 @@
         const fetchIndex = (idx) => {
           const url = this.#figures[idx].$('img').dataset.originalSrc;
           if (url && !url.startsWith('data')) {
-            〆.cachedFetchImageToDataURL(url);
+            〆.cachedFetchToDataURL(url);
           }
         };
 
@@ -257,6 +257,10 @@
       #setRasterizationParameters() {
         const bodyElem = $('#page-body');
 
+        const smallViewHeaderHeight =
+          〆.computedStyle('html', '--small-view-header-height', parseFloat) /
+          〆.REM_SCALE;
+
         const smallPageViewPaddingTop =
           (〆.computedStyle(
             'html',
@@ -288,7 +292,7 @@
         const articleFigcaptionFontSize =
           〆.computedStyle(
             'html',
-            '--sidebar-controls-and-artical-figcaption-font-size',
+            '--sidebar-controls-and-article-figcaption-font-size',
             parseFloat
           ) / 〆.REM_SCALE;
 
@@ -300,6 +304,7 @@
 
         const dynamicStyleSheet = `
           #page-body.page-small {
+            --small-view-header-height: ${smallViewHeaderHeight}rem;
             --padding-top: ${smallPageViewPaddingTop}rem;
             --padding-horizontal: ${smallPageViewPaddingHorizontal}rem;
           }
@@ -363,8 +368,7 @@
                     '.rasterization-detector-target',
                     '.blockquote-detector-target',
                   ]
-                : ['p:first-of-type'],
-              this.#isFlatPage ? 'left' : 〆.isSmallView() ? 'left' : 'right'
+                : ['p:first-of-type']
             )
           );
 
@@ -385,7 +389,7 @@
         let fetchPromises = imgElems.map((elem, idx) => [
           idx,
           〆
-            .cachedFetchImageToDataURL(elem.dataset.originalSrc)
+            .cachedFetchToDataURL(elem.dataset.originalSrc)
             .then((dataURL) => [idx, dataURL]),
         ]);
 
@@ -558,6 +562,9 @@
           img.src = 〆.generateBlankSVGInDataURI(1, 1);
         }
 
+        await this.#computeSizingForSVGRendering(abortSignal);
+        if (abortSignal.aborted) return;
+
         this.#image = await this.#rasterizeDoc();
       };
 
@@ -576,10 +583,13 @@
         if (src.startsWith('data:')) {
           img.src = src;
         } else {
-          const dataURL = await 〆.cachedFetchImageToDataURL(src);
+          const dataURL = await 〆.cachedFetchToDataURL(src);
           if (abortSignal.aborted) return;
           img.src = dataURL;
         }
+
+        await this.#computeSizingForSVGRendering(abortSignal);
+        if (abortSignal.aborted) return;
 
         this.#image = await this.#rasterizeDoc();
       };
@@ -594,7 +604,7 @@
         this.#image = await this.#rasterizeDoc();
       };
 
-      #getTargetPointsFromSelectors(doc, selectors, xRefEdge) {
+      #getTargetPointsFromSelectors(doc, selectors) {
         return selectors
           .flatMap((selector) => Array.from(doc.$$(selector)))
           .map((elem) => {
@@ -608,7 +618,11 @@
                 h: rect.height - RASTERIZE_DETECT_OFFSET,
               };
             } else {
-              xRefEdge ??= 'left';
+              const xRefEdge =
+                elem.tagName.toLowerCase() === 'p' &&
+                getComputedStyle(elem).textAlign === 'right'
+                  ? 'right'
+                  : 'left';
 
               return {
                 x:

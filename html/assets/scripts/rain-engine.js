@@ -48,15 +48,7 @@ function createCanvas(width,height){
 
 let WebGL = {};
 WebGL.getContext = function(canvas, options={}) {
-  let contexts = ["webgl", "experimental-webgl"];
-  let context = null;
-
-  contexts.some(name=>{
-    try{
-      context = canvas.getContext(name,options);
-    }catch(e){};
-    return context!=null;
-  });
+  let context = canvas.getContext('webgl', options);
 
   if(context==null){
     // document.body.classList.add("no-webgl");
@@ -924,8 +916,7 @@ const onInit = function (env) {
   );
 
   const canvasCtx =
-    targetCanvas.getContext('webgl') ??
-    targetCanvas.getContext('experimental-webgl');
+    targetCanvas.getContext('webgl') ;
   canvasCtx.clearColor(0, 0, 0, 0);
   canvasCtx.viewport(
     0,

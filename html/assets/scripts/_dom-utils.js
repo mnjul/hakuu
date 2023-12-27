@@ -57,33 +57,6 @@
     return _fetchCache.get(src);
   };
 
-  const _isWebPSupported = new Promise((resolve) => {
-    const img = new Image();
-    img.addEventListener(
-      'load',
-      () => {
-        resolve(img.width > 0 && img.height > 0);
-      },
-      { once: true }
-    );
-    img.addEventListener(
-      'error',
-      () => {
-        resolve(false);
-      },
-      { once: true }
-    );
-    img.src =
-      'data:image/webp;base64,UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==';
-  });
-
-  exports.〆.cachedFetchImageToDataURL = async (src) => {
-    if (await _isWebPSupported) {
-      src = src.replace(/\.(jpg|png)$/, '.webp');
-    }
-    return 〆.cachedFetchToDataURL(src);
-  };
-
   exports.〆.generateBlankSVGInDataURI = (width, height) =>
     〆.svgXMLToDataURL(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
@@ -179,11 +152,6 @@
       img.addEventListener('load', loadHandler, { once: true });
     });
 
-  exports.〆.convertToImageBitmapIfPossible = (img) => {
-    if (window.createImageBitmap) return createImageBitmap(img);
-    else return img;
-  };
-
   let CAN_USE_CREATE_IMAGE_BITMAP_WITH_SVG_FOREIGN_OBJECT = false;
 
   exports.〆.convertSvgImageToImageBitmapIfPossible = (img) => {
@@ -195,8 +163,7 @@
   };
 
   CAN_USE_CREATE_IMAGE_BITMAP_WITH_SVG_FOREIGN_OBJECT =
-    window.createImageBitmap &&
-    !〆.isSafari15 && // Safari 15 actually can't canvas-render the image if it's too large, not sure why
+    !〆.isSafari15Plus && // Safari 15+ actually can't canvas-render the image if it's too large, not sure why
     (await new Promise((resolve, reject) => {
       const img = new Image();
 

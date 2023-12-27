@@ -69,7 +69,7 @@
       const source = (await this.getPageSourcePromise('prehension')).source;
       const allMatches = Array.from(source.matchAll(/src="([^"]+)"/g));
       const fetchMatch = (index) =>
-        〆.cachedFetchImageToDataURL(allMatches[index][1]);
+        〆.cachedFetchToDataURL(allMatches[index][1]);
       fetchMatch(0);
       fetchMatch(allMatches.length - 1);
       fetchMatch(1);

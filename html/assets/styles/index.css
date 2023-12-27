@@ -24,7 +24,7 @@
   --loading-indicator-side: 1.57px; /* actually pi/2 */
   --small-view-sidebar-toggle-position-offset: -2px;
 
-  --sidebar-controls-and-artical-figcaption-font-size: 15px;
+  --sidebar-controls-and-article-figcaption-font-size: 15px;
 
   /* following values used in js too */
   --small-view-content-horizontal-padding: 24px;
@@ -32,7 +32,7 @@
 
   --background-hue: 54;
   --background-saturation: 33%;
-  --paper-background-lightness: 98%;
+  --background-lightness: 98%;
 
   /* emperical values from current distant light elevation */
   --background-color-saturation-factor-from-paper-background: 0.05;
@@ -45,7 +45,7 @@
         var(--background-color-saturation-factor-from-paper-background)
     ),
     calc(
-      var(--paper-background-lightness) *
+      var(--background-lightness) *
         var(--background-color-lightness-factor-from-paper-background)
     )
   );
@@ -97,6 +97,13 @@
   font-size: 0;
 
   line-height: 1;
+}
+
+#paper-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
 }
 
 /* safari, despite user-select: none */
@@ -215,7 +222,12 @@ h1 {
     z-index: 2;
 
     transition: visibility var(--small-view-sidebar-transition-duration) linear,
-      opacity var(--small-view-sidebar-transition-duration) linear;
+      opacity var(--small-view-sidebar-transition-duration) linear,
+      backdrop-filter var(--small-view-sidebar-transition-duration) ease-in-out,
+      -webkit-backdrop-filter var(--small-view-sidebar-transition-duration) ease-in-out;
+
+    backdrop-filter: blur(0) invert(1) brightness(1) invert(1);
+    -webkit-backdrop-filter: blur(0) invert(1) brightness(1) invert(1);
 
     background-color: rgba(255, 255, 255, 0.4);
 
@@ -230,6 +242,9 @@ h1 {
     visibility: visible;
     opacity: 1;
     pointer-events: initial;
+
+    backdrop-filter: blur(6px) invert(1) brightness(0.7) invert(1);
+    -webkit-backdrop-filter: blur(6px) invert(1) brightness(0.7) invert(1);
   }
 }
 
@@ -313,7 +328,7 @@ h1 {
 #rain-control,
 #volume-control,
 #sidebar-prehension-control {
-  font-size: var(--sidebar-controls-and-artical-figcaption-font-size);
+  font-size: var(--sidebar-controls-and-article-figcaption-font-size);
   color: var(--control-color);
 }
 
@@ -530,20 +545,6 @@ body.loading .loading-indicator {
 
 body[data-current-page='prehension'] #page-holder {
   width: var(--main-width) !important;
-}
-
-@media (max-width: 599px) {
-  /* firefox doesn't support backdrop filter */
-  #viewport,
-  #small-view-header {
-    transition: filter var(--small-view-sidebar-transition-duration) ease-in-out;
-    filter: blur(0) invert(1) brightness(1) invert(1);
-  }
-
-  body.small-view-sidebar-visible #viewport,
-  body.small-view-sidebar-visible #small-view-header {
-    filter: blur(6px) invert(1) brightness(0.7) invert(1);
-  }
 }
 
 #viewport {

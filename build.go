@@ -37,7 +37,6 @@ const ImagesDirName = "assets/images/"
 const StylesDirName = "assets/styles/"
 const ScriptsDirName = "assets/scripts/"
 
-var IndexHtmlStyleRegex = regexp.MustCompile(`\n\s*<link\s+href="dep/normalize\.css/normalize\.css"\s+rel="stylesheet"\s+type="text/css"\s+/>\s*\n`)
 var IndexHtmlScriptRegex = regexp.MustCompile(`[ \t]*<script\s+defer\s+src="([^"]+)"\s*></script\s*>\s*\n`)
 
 func main() {
@@ -132,8 +131,6 @@ func buildIndexHtml() {
 	fmt.Println("> Reading index.html for building...")
 	srcIndexHtml := readFile("index.html")
 	dstIndexHtml := srcIndexHtml
-
-	dstIndexHtml = IndexHtmlStyleRegex.ReplaceAllString(dstIndexHtml, "\n")
 
 	for _, match := range IndexHtmlScriptRegex.FindAllStringSubmatch(dstIndexHtml, -1) {
 		if match[1] == "assets/scripts/index.js" {

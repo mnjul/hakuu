@@ -23,15 +23,32 @@
       }
     })();
 
+    if (!window.createImageBitmap) return;
+
+    if (!window.Worker) return;
+
+    if (!new OffscreenCanvas(1, 1).getContext('webgl')) return;
+
     const canvas = document.createElement('canvas');
-    if (
-      ['webgl', 'experimental-webgl'].every((type) => !canvas.getContext(type))
-    ) {
-      return;
-    }
     if (!canvas.replaceChildren) {
       return;
     }
+
+    const j = await new Promise((resolve, reject) => {
+      const jj = new Image();
+      jj.addEventListener(
+        'load',
+        () => {
+          resolve(jj.width > 0 && jj.height > 0);
+        },
+        { once: true }
+      );
+      jj.addEventListener('error', reject, { once: true });
+      jj.src =
+        'data:image/avif;base64,AAAAHGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZgAAAOptZXRhAAAAAAAAACFoZGxyAAAAAAAAAABwaWN0AAAAAAAAAAAAAAAAAAAAAA5waXRtAAAAAAABAAAAImlsb2MAAAAAREAAAQABAAAAAAEOAAEAAAAAAAAAFgAAACNpaW5mAAAAAAABAAAAFWluZmUCAAAAAAEAAGF2MDEAAAAAamlwcnAAAABLaXBjbwAAABNjb2xybmNseAABAA0ABoAAAAAMYXYxQ4EgAgAAAAAUaXNwZQAAAAAAAAABAAAAAQAAABBwaXhpAAAAAAMICAgAAAAXaXBtYQAAAAAAAAABAAEEAYIDBAAAAB5tZGF0EgAKBzgADlAQ0GkyCR+QAABAAACv5g==';
+    });
+
+    if (!j) return;
 
     globalThis.clearTimeout(globalThis.esBlockerTimeout);
     delete globalThis.esBlockerTimeout;

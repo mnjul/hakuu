@@ -15,8 +15,10 @@
   });
 
   // :(. See individual usages.
-  exports.〆.isFirefox = navigator.userAgent.includes('Firefox');
-  exports.〆.isSafari15 = !!navigator.userAgent.match(
-    /Version\/15\.\S+ Safari\//
-  );
+  exports.〆.isSafari15Plus = (() => {
+    const match = navigator.userAgent.match(/Version\/(\d+)\.\S+ Safari\//);
+    if (!match) return false;
+    if (parseInt(match[1]) >= 15) return true;
+    return false;
+  })();
 })(window);
